@@ -1,6 +1,13 @@
+import sys
 import argparse
 # import paper as ALBI
 
+
+class MyArgumentParser(argparse.ArgumentParser):
+    def error(self, message):
+        sys.stderr.write('error: %s\n' % message)
+        self.print_help()
+        sys.exit(2)
 
 def _generate_parse_kinship_arguments( parser ):
     parser.add_argument( '-k', '--kinship_eigenvalues', dest = 'kinship_eigenvalues', required = True, help = "path to file containing the eigealues of the kinship matrix" ) 
@@ -10,18 +17,18 @@ def _generate_parse_kinship_arguments( parser ):
 def _generate_build_CI_arguments( parser ):
     parser.add_argument( '-c', '--confidance',          dest = 'confidance',          required = True, help = "How exact should the resualt CI be (precentage between 0-100")
     group = parser.add_mutually_exclusive_group( required = True )
-    group.add_argument( '-ef', '--estimates_filename', dest = 'estimates_filename',  help = "A filename for the heritability estimates for which we want to build CIs. A text file with one estimate per row." ) #estimate is h^2? to which func is this? isn't it the interval? do we need it if we have 'intervals'
+    group.add_argument( '-ef', '--estimates_filename', dest = 'estimates_filename',  help = "A filename for the heritability estimates for which we want to build CIs. A text file with one estimate per row." )
     group.add_argument( '-eg', '--estimate_grid',      dest = 'estimate_grid',       nargs = '?',     type = int, const = 0.1, help = "Instead of giving a file with a list of estimates, we can ask ALBI to simply give us CIs over (0,a,2a,3a,...,1), for example with a=0.01. This parameter is the grid size (e.g., 0.01). This flag is mutually exclusive with estimates_filename." )
     
 
 if __name__ == '__main__':
 
-    parser = argparse.ArgumentParser(prog='ALBI')
+    parser = MyArgumentParser(prog='ALBI')
     subparsers = parser.add_subparsers(help='sub-command help')
 
 
     # OPTION 1
-    parser_a = subparsers.add_parser( 'opt1', help = 'TODO: provide help' )
+    parser_a = subparsers.add_parser( 'opt1', help = 'full run: supply kinship eigenvalues and get CI values (TODO edit this)' )
     _generate_parse_kinship_arguments(parser_a)
     _generate_build_CI_arguments( parser_a )
 
@@ -31,22 +38,22 @@ if __name__ == '__main__':
 
        
     # OPTION 2
-    parser_b = subparsers.add_parser( 'opt2', help = 'TODO b help' )
+    parser_b = subparsers.add_parser( 'opt2', help = 'generate distribution file from kinship eigenvalues file (TODO edit this)' )
     _generate_parse_kinship_arguments(parser_b)
     # exclusive arguments
     parser_b.add_argument( '-d', '--save_distributions',  dest = 'save_distributions',  required = True, help = "This is a filename to which the program will save the output of calculate_probability_intervals, which is a matrix (take a look at savetxt)." )
 
 
     # OPTION 3
-    parser_c = subparsers.add_parser( 'opt3', help = 'TODO c help' )
+    parser_c = subparsers.add_parser( 'opt3', help = 'generate CIs from distribution file  (TODO edit this)' )
     _generate_build_CI_arguments( parser_c )
     # exclusive arguments
     parser_c.add_argument( '-d', '--load_distributions',  dest = 'load_distributions',  required = True, help = "This is a filename to which the program will load the output of calculate_probability_intervals, which is a matrix (loadtxt). This flag is mutually exclusive with --input" )
     parser_c.add_argument( '-o', '--output_filename',     dest = 'output_filename',     nargs = '?',     type = str,     default = None, const = None, help = "The filename to which we will output the results of ALBI. A text file of a matrix, where each row is (h^2 estimate, lower bound, upper bound" )
 
-
+    
     a = parser.parse_args()
-
+    
     print 'kinship_eigenvalues', a.kinship_eigenvalues
     print 'samples', a.samples
     print 'precision', a.precision
