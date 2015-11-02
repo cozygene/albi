@@ -6,7 +6,7 @@ import socket, os.path, cPickle, csv, bisect, time, tempfile, subprocess
 # Ignore divide by 0 warnings
 numpy.seterr(divide='ignore')
 
-# Use progress bar is available
+# Use progress bar if available
 itrange = locals().get('trange', range)
 
 def weights_zero_derivative(h2_values, H2_values, kinship_eigenvalues, 
@@ -83,6 +83,9 @@ def calculate_probability_intervals(h2_values, H2_values, kinship_eigenvalues,
     monte_carlo_size = 1
     n_samples = len(kinship_eigenvalues)
     n_intervals = len(H2_values)-1
+
+    # Make sure the eigenvalues are in decreasing order and nonzero
+    kinship_eigenvalues = array(sorted(maximum(kinship_eigenvalues, 1e-10)))[::-1]
 
     # Size: N X M X K
     weights = weights_zero_derivative(h2_values, H2_values, kinship_eigenvalues, eigenvectors_as_X=eigenvectors_as_X, REML=REML)
