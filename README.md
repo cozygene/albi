@@ -39,7 +39,7 @@ You can also clone the repository and do a manual install:**
 ```
 
 
-* To uninstal run 'sudo pip uninstall ALBI' <br/>
+ * To uninstal run 'sudo pip uninstall ALBI' <br/>
 ** After installing you can delete the cloned folder.
 
 
