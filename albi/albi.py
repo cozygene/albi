@@ -359,31 +359,3 @@ def build_heritability_cis(h2_values, H2_values, all_distributions, estimated_va
             cis[i,1] = h2_values[idx-1] + (h2_values[idx] - h2_values[idx-1]) * proportion 
 
     return cis
-
-# TODO: Remove this
-def example():    
-    precision_h2 = 0.01
-    precision_H2 = 0.01
-
-    h2_values = arange(0, 1 + precision_h2, precision_h2)
-    H2_values = arange(0, 1 + precision_H2, precision_H2)
-
-    GIT_DIR = "/Users/regevschweiger/git/albi"
-    dummy, gtex_eigenvalues = cPickle.load(file(os.path.join(GIT_DIR, "gtex_after_qc_matrix_decomposition.pcl"), "rb"))
-
-    all_distributions = calculate_probability_intervals(h2_values = h2_values, 
-                                                        H2_values = H2_values, 
-                                                        kinship_eigenvalues = gtex_eigenvalues, 
-                                                        n_random_samples = 100)
-
-
-    cis = build_heritability_cis(h2_values = h2_values, 
-                                 H2_values = H2_values, 
-                                 all_distributions = all_distributions, 
-                                 estimated_values = [0.1,0.2222,0.33, 0.5, 0.8888], 
-                                 confidence = 0.95, 
-                                 use_randomized_cis = False)
-
-
-    return cis
-
