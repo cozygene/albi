@@ -1,6 +1,6 @@
 
 # TODO !!
-change aruments long name
+change aruments long name <br/>
 change help and documentation
 
 ## ALBI
@@ -39,7 +39,7 @@ You can also clone the repository and do a manual install:**
 ```
 
 
-* To uninstal run 'sudo pip uninstall ALBI'
+* To uninstal run 'sudo pip uninstall ALBI' <br/>
 ** After installing you can delete the cloned folder.
 
 
