@@ -7,5 +7,5 @@ setup(
       url = "https://github.com/cozygene/albi",
       description = '',
       packages=['albi'],
-      scripts=['albi/albi.py'],
+      scripts=['albi.py'],
     )
