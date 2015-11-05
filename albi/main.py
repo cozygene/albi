@@ -4,8 +4,7 @@ import os
 import sys
 import argparse
 from numpy import arange, loadtxt, savetxt
-import albi_lib as ALBI
-
+import albi as ALBI 
 
 class MyArgumentParser(argparse.ArgumentParser):
     def error(self, message):
@@ -172,7 +171,7 @@ def run_albi( kinship_eigenvalues_filename = None,
         sys.stdout = sys.__stdout__ # return stdout
 
 if __name__ == '__main__':
-    parser = MyArgumentParser(prog='ALBI',  usage=ALBI_USAGE)
+    parser = MyArgumentParser(prog=os.path.basename(sys.argv[0]),  usage=ALBI_USAGE)
 
     parser.add_argument( '--kinship_eigenvalues',                                                                  help = "path to file containing the eigealues of the kinship matrix" ) 
     group = parser.add_mutually_exclusive_group( required = False )
