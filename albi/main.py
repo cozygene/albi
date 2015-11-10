@@ -122,7 +122,7 @@ class ProgressBarIter( object ):
         self.width = width
         self.prefix = '| '
         self.suffix = ' |'
-        self.precentage = "{precentage}%"
+        self.precentage = " {precentage}%"
 
     def __iter__( self ):
         return self
@@ -134,7 +134,8 @@ class ProgressBarIter( object ):
         self.current += 1
         precentage = (self.current / self.length )
         precentage_str = self.precentage.format(precentage = precentage * 100)
-        process_bar_fill_str = ( '#' * int(precentage * self.width) ).ljust( self.width - len(self.prefix) - len(self.suffix) - len(precentage_str) )
+        width_left = self.width - len(self.prefix) - len(self.suffix) - len(precentage_str)
+        process_bar_fill_str = ( '#' * int(precentage * width_left) ).ljust( width_left )
         self._write( self.prefix + process_bar_fill_str + precentage_str + self.suffix )
 
         if precentage == 1:
@@ -145,6 +146,8 @@ class ProgressBarIter( object ):
         self.stdout.write( line )
         self.stdout.flush()
 
+    def __len__( self ):
+      return self.length
 
 def run_albi( kinship_eigenvalues_filename = None,
               estimate_grid = None,
