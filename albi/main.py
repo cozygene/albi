@@ -9,10 +9,11 @@ import albi as ALBI
 class MyArgumentParser(argparse.ArgumentParser):
     def error(self, message):
         sys.stderr.write('error: %s\n' % message)
-        print "To see full help: %s -h/--help" % self.prog
+        print( "To see full help: %s -h/--help" % self.prog )
         sys.exit(2)
 
 SHELL_WIDTH = 70
+VERSION_3 = sys.version_info  >= (3, 0)
 ALBI_USAGE  = \
 """
 If you want to build_heritability_cis from a kinship_eigenvalues please specify        %(prog)s --kinship_eigenvalues  [kinship file]        --estimates_filename/--estimate_grid
@@ -24,21 +25,21 @@ There are optional arguments you can specify as you can see below:
 
 # opt2
 def calculate_probability_intervals( precision_h2, precision_H2, kinship_eigenvalues_data, samples = 1000, distributions_filename = None):
-    print "Calculating probability intervals..."
+    print( "Calculating probability intervals..." )
     distributions =  ALBI.calculate_probability_intervals( h2_values = arange(0, 1 + precision_h2, precision_h2), 
                                                            H2_values = arange(0, 1 + precision_H2, precision_H2), 
                                                            kinship_eigenvalues = kinship_eigenvalues_data, 
                                                            n_random_samples = samples
                                                          )
-    print "Done calculating"
+    print( "Done calculating" )
     if distributions_filename:
         savetxt( distributions_filename, distributions )
-        print "Distributions are written to '%s' " % distributions_filename
+        print( "Distributions are written to '%s' " % distributions_filename )
     return distributions
 
 # opt3 
 def build_heritability_cis_from_distributions( precision_h2, precision_H2, all_distributions_data, estimates, confidence = 0.95, output_filename = None ):
-    print "Building heritability CIs..."
+    print( "Building heritability CIs..." )
     cis =  ALBI.build_heritability_cis( h2_values = arange(0, 1 + precision_h2, precision_h2), 
                                         H2_values = arange(0, 1 + precision_H2, precision_H2), 
                                         all_distributions = all_distributions_data, 
@@ -46,10 +47,10 @@ def build_heritability_cis_from_distributions( precision_h2, precision_H2, all_d
                                         confidence = confidence, 
                                         use_randomized_cis = False
                                       )
-    print "Done building CIs"
+    print( "Done building CIs" )
     if output_filename:
         savetxt( output_filename, cis )
-        print "Heritability CIs are written to '%s' " % output_filename
+        print( "Heritability CIs are written to '%s' " % output_filename )
     return cis
 
 # opt1
@@ -68,14 +69,14 @@ def build_heritability_cis_from_kinship( precision_h2, precision_H2, kinship_eig
                                                       confidence = confidence, 
                                                       output_filename = output_filename
                                                       )
-    print "Done"
+    print( "Done" )
 
 
 def _get_estimates( estimate_grid, estimates_filename ):
     if estimate_grid:
         estimates = arange(0, 1 + estimate_grid, estimate_grid) #is that right? TODO
     elif not os.path.exists( estimates_filename ) :
-        print "The file '%s' doesn't exist. Exiting" % estimates_filename
+        print( "The file '%s' doesn't exist. Exiting" % estimates_filename )
         sys.exit(2)  
     else:
         estimates = file( args.estimates_filename, 'rb' ).read()
@@ -126,8 +127,10 @@ class ProgressBarIter( object ):
     def __iter__( self ):
         return self
 
-    def __next__( self ):
-        # def next(self): # Python 3: def __next__(self)
+    def __next__( self ): # Python 3 uses __next__ for iterator
+        self.next()
+
+    def next( self ): # Python 2 uses next for iterator
         self.current += 1
         precentage = (self.current / self.length )
         precentage_str = self.precentage.format(precentage = precentage * 100)
@@ -141,6 +144,7 @@ class ProgressBarIter( object ):
         self.stdout.write('\r')
         self.stdout.write( line )
         self.stdout.flush()
+
 
 def run_albi( kinship_eigenvalues_filename = None,
               estimate_grid = None,
@@ -175,16 +179,18 @@ def run_albi( kinship_eigenvalues_filename = None,
     # if a kinship_eigenvalues wasn't speified - the user wants to run opt3 or he was wrong. If it was specified the user wants to run opt1 or opt2
     if kinship_eigenvalues_filename is None: # opt3 or error
         if load_distributions_filename is None:
-            print "If you want to build_heritability_cis from a kinship_eigenvalues please specify        --kinship_eigenvalues  [kinship file]        --estimates_filename/--estimate_grid\n" \
+            print( "If you want to build_heritability_cis from a kinship_eigenvalues please specify        --kinship_eigenvalues  [kinship file]        --estimates_filename/--estimate_grid\n" \
                 + "If you want to build_heritability_cis from a distribution file please specify          --load_distributions   [distribuation file]  --estimates_filename/--estimate_grid\n" \
-                + "If you just want to calculate_probability_intervals please specify                     --kinship_eigenvalues  [kinship file]        --save_distributions [distribuation file]"
+                + "If you just want to calculate_probability_intervals please specify                     --kinship_eigenvalues  [kinship file]        --save_distributions [distribuation file]" 
+                )
             return None
         elif not os.path.exists( load_distributions_filename ):
-            print "The file '%s' doesn't exist. Exiting" % load_distributions_filename #use logging ifo?TODO
+            print(  "The file '%s' doesn't exist. Exiting" % load_distributions_filename ) #use logging ifo?TODO
             return None
         elif estimates_filename is None and estimate_grid is None:
-            print "Few arguments are missing.\n" \
+            print( "Few arguments are missing.\n" \
                   + "If you want to build_heritability_cis from a distribution file please also specify --estimate_grid/--estimates_filename"
+                  )
             return None
         else:
             # run opt3
@@ -198,15 +204,16 @@ def run_albi( kinship_eigenvalues_filename = None,
                                                             )
 
     elif not os.path.exists( kinship_eigenvalues_filename ) :
-                print "The file '%s' doesn't exist. Exiting" % kinship_eigenvalues_filename
+                print( "The file '%s' doesn't exist. Exiting" % kinship_eigenvalues_filename )
                 return None
 
     else: # opt1 or opt2
         if estimates_filename is None and estimate_grid is None: #opt2 or error
             if save_distributions_filename is None:
-                print "Few arguments are missing.\n" \
+                print( "Few arguments are missing.\n" \
                     + "If you want to build_heritability_cis please also specify --estimate_grid/--estimates_filename.\n" \
                     + "If you want to calculate_probability_intervals please also specify --save_distributions file"
+                    )
                 return None
             else:
                 # run opt2
@@ -250,8 +257,8 @@ if __name__ == '__main__':
 
     args = parser.parse_args()
 
-    print "Hello from ALBI"
-    print "To see full help run: %s -h/--help\n" % parser.prog
+    print( "Hello from ALBI" )
+    print( "To see full help run: %s -h/--help\n" % parser.prog )
     
     if args.kinship_eigenvalues is None and args.estimates_filename is None and args.estimate_grid is None:
         parser.print_help()
