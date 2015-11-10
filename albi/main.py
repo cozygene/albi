@@ -121,21 +121,21 @@ class ProgressBarIter( object ):
         self.width = width
         self.prefix = '| '
         self.suffix = ' |'
-        self.precentage = "{precentage}%".format(kwarg=sub2)
+        self.precentage = "{precentage}%"
 
     def __iter__( self ):
         return self
 
     def __next__( self ):
         # def next(self): # Python 3: def __next__(self)
+        self.current += 1
         precentage = (self.current / self.length )
+        precentage_str = self.precentage.format(precentage = precentage * 100)
+        process_bar_fill_str = ( '#' * int(precentage * self.width) ).ljust( self.width - len(self.prefix) - len(self.suffix) - len(precentage_str) )
+        self._write( self.prefix + process_bar_fill_str + precentage_str + self.suffix )
+
         if precentage == 1:
             raise StopIteration
-        else:
-            self.current += 1
-            precentage_str = self.precentage.format(precentage = precentage * 100)
-            process_bar_fill_str = ( '#'* precentage * self.width ).ljust( self.width - len(self.prefix) - len(self.suffix) - les(precentage_str) )
-            _write( self.prefix + process_bar_fill_str + precentage_str + self.suffix )
 
     def _write( self, line ) :
         self.stdout.write('\r')
