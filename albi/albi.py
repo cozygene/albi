@@ -4,7 +4,7 @@ import os
 import sys
 import argparse
 from numpy import arange, loadtxt, savetxt
-import albi as ALBI 
+import albi_lib as albi
 
 class MyArgumentParser(argparse.ArgumentParser):
     def error(self, message):
@@ -14,7 +14,7 @@ class MyArgumentParser(argparse.ArgumentParser):
 
 SHELL_WIDTH = 70
 
-ALBI_USAGE  = \
+albi_USAGE  = \
 """
 If you want to build_heritability_cis from a kinship_eigenvalues please specify        %(prog)s --kinship_eigenvalues  [kinship file]        --estimates_filename/--estimate_grid
 If you want to build_heritability_cis from a distribution file please specify          %(prog)s --load_distributions   [distribuation file]  --estimates_filename/--estimate_grid
@@ -61,7 +61,7 @@ class ProgressBarIter( object ):
         self.width = width
         self.prefix = '| '
         self.suffix = ' |'
-        self.precentage = " {precentage}%"
+        self.percentage = " {percentage}%"
 
     def __iter__( self ):
         return self
@@ -71,13 +71,13 @@ class ProgressBarIter( object ):
 
     def next( self ): # Python 2 uses next for iterator
         self.current += 1
-        precentage = (self.current / self.length )
-        precentage_str = self.precentage.format(precentage = precentage * 100)
-        width_left = self.width - len(self.prefix) - len(self.suffix) - len(precentage_str)
-        process_bar_fill_str = ( '#' * int(precentage * width_left) ).ljust( width_left )
-        self._write( self.prefix + process_bar_fill_str + precentage_str + self.suffix )
+        percentage = (self.current / self.length )
+        percentage_str = self.percentage.format(percentage = percentage * 100)
+        width_left = self.width - len(self.prefix) - len(self.suffix) - len(percentage_str)
+        process_bar_fill_str = ( '#' * int(percentage * width_left) ).ljust( width_left )
+        self._write( self.prefix + process_bar_fill_str + percentage_str + self.suffix )
 
-        if precentage == 1:
+        if percentage == 1:
             raise StopIteration
 
     def _write( self, line ) :
@@ -91,7 +91,7 @@ class ProgressBarIter( object ):
 # opt2
 def calculate_probability_intervals( precision_h2, precision_H2, kinship_eigenvalues_data, samples = 1000, distributions_filename = None):
     print( "Calculating probability intervals..." )
-    distributions =  ALBI.calculate_probability_intervals( h2_values = precision_h2, 
+    distributions =  albi.calculate_probability_intervals( h2_values = precision_h2, 
                                                            H2_values = precision_H2, 
                                                            kinship_eigenvalues = kinship_eigenvalues_data, 
                                                            n_random_samples = samples
@@ -105,7 +105,7 @@ def calculate_probability_intervals( precision_h2, precision_H2, kinship_eigenva
 # opt3 
 def build_heritability_cis_from_distributions( precision_h2, precision_H2, all_distributions_data, estimates, confidence = 0.95, output_filename = None ):
     print( "Building heritability CIs..." )
-    cis =  ALBI.build_heritability_cis( h2_values = precision_h2, 
+    cis =  albi.build_heritability_cis( h2_values = precision_h2, 
                                         H2_values = precision_H2,
                                         all_distributions = all_distributions_data, 
                                         estimated_values = estimates, 
@@ -160,8 +160,8 @@ def run_albi( kinship_eigenvalues_filename = None,
               output_filename = None,
               print_comments = False ):
     """
-    There are three options to run ALBI:
-    opt1 - build_heritability_cis_from_kinship. The full run of ALBI. gets a kinship eigenvalues and returns the heritability CIs. (This is actually opt2 + opt3)
+    There are three options to run albi:
+    opt1 - build_heritability_cis_from_kinship. The full run of albi. gets a kinship eigenvalues and returns the heritability CIs. (This is actually opt2 + opt3)
     opt2 - calculate_probability_intervals. gets a kinship eigenvalues and calculate probability intervals (distributions) and saves it for later.
     opt3 - build_heritability_cis_from_distributions. gets the distributions file from opt2 and returns the heritability CIs.
 
@@ -171,7 +171,7 @@ def run_albi( kinship_eigenvalues_filename = None,
     for opt3 - you have to specify load_distributions + estimates
 
     arguments:
-    all except print_comments are ALBI arguments (you can see description in __main__ below)
+    all except print_comments are albi arguments (you can see description in __main__ below)
     @ print_comments: if True prints to stdout the comments, otherwise doesn't print
     """
     
@@ -241,7 +241,7 @@ def run_albi( kinship_eigenvalues_filename = None,
         sys.stdout = sys.__stdout__ # return stdout
 
 if __name__ == '__main__':
-    parser = MyArgumentParser(prog=os.path.basename(sys.argv[0]),  usage=ALBI_USAGE)
+    parser = MyArgumentParser(prog=os.path.basename(sys.argv[0]),  usage=albi_USAGE)
 
     parser.add_argument( '--kinship_eigenvalues',                                                                  help = "path to file containing the eigealues of the kinship matrix" ) 
     group = parser.add_mutually_exclusive_group( required = False )
@@ -250,16 +250,16 @@ if __name__ == '__main__':
     parser.add_argument( '--save_distributions',                     type = str,                                   help = "default is None. This is a filename to which the program will save the output of calculate_probability_intervals, which is a matrix (take a look at savetxt)." )
     parser.add_argument( '--load_distributions',                     type = str,                                   help = "default is None. This is a filename to which the program will load the output of calculate_probability_intervals, which is a matrix (loadtxt). This flag is mutually exclusive with --input" )
     
-    parser.add_argument( '--precision',             nargs = '?',     type = float,   default = 0.1,  const = 0.1,  help = "default value is 0.1.  the intervals between the h^2 values ALBI checks" )
+    parser.add_argument( '--precision',             nargs = '?',     type = float,   default = 0.1,  const = 0.1,  help = "default value is 0.1.  the intervals between the h^2 values albi checks" )
     parser.add_argument( '--precision2',            nargs = '?',     type = float,   default = 0.1,  const = 0.1,  help = "default value is 0.1.  I dont know what this is for :p" ) 
-    parser.add_argument( '--samples',               nargs = '?',     type = int,     default = 1000, const = 1000, help = "default value is 1000. Number of samples ALBI should take" ) #   monte_carlo_size
-    parser.add_argument( '--confidence',            nargs = '?',     type = float,   default = 0.95, const = 0.95, help = "default value is 0.95. How exact should the resualt CI be (precentage between 0-100")
+    parser.add_argument( '--samples',               nargs = '?',     type = int,     default = 1000, const = 1000, help = "default value is 1000. Number of samples albi should take" ) #   monte_carlo_size
+    parser.add_argument( '--confidence',            nargs = '?',     type = float,   default = 0.95, const = 0.95, help = "default value is 0.95. How exact should the resualt CI be (percentage between 0-100")
     
-    parser.add_argument( '--output_filename',                        type = str,                                   help = "default is None. The filename to which we will output the results of ALBI. A text file of a matrix, where each row is (h^2 estimate, lower bound, upper bound" )
+    parser.add_argument( '--output_filename',                        type = str,                                   help = "default is None. The filename to which we will output the results of albi. A text file of a matrix, where each row is (h^2 estimate, lower bound, upper bound" )
 
     args = parser.parse_args()
 
-    print( "Hello from ALBI" )
+    print( "Hello from albi" )
     print( "To see full help run: %s -h/--help\n" % parser.prog )
     
     if args.kinship_eigenvalues is None and args.estimates_filename is None and args.estimate_grid is None:

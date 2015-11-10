@@ -1,10 +1,9 @@
-from numpy import *
+from numpy import * # for: newaxis, isclose, seterr, random, array, maximum, reshape, ones
+import bisect
 
-import numpy.linalg, numpy.random
-import socket, os.path, cPickle, csv, bisect, time, tempfile, subprocess
 
 # Ignore divide by 0 warnings
-numpy.seterr(divide='ignore')
+seterr(divide='ignore')
 
 def weights_zero_derivative(h2_values, H2_values, kinship_eigenvalues, 
                             eigenvectors_as_X=[-1], REML=True):
@@ -87,7 +86,7 @@ def calculate_probability_intervals(h2_values, H2_values, kinship_eigenvalues,
     # Size: N X M X K
     weights = weights_zero_derivative(h2_values, H2_values, kinship_eigenvalues, eigenvectors_as_X=eigenvectors_as_X, REML=REML)
     
-    rng = numpy.random.RandomState(seed)
+    rng = random.RandomState(seed)
     prob = zeros((len(h2_values), n_intervals+2))
 
     if not hasattr(n_random_samples, '__iter__'):  # assumes that n_random_samples is int
@@ -163,7 +162,7 @@ def quantiles(h2_values, cdf, beta):
             return value
 
     # If it's not in that open interval, this either beta <= p0 or beta >= 1-p1
-    elif (beta <= cdf[0]) or numpy.isclose(beta, cdf[0]):
+    elif (beta <= cdf[0]) or isclose(beta, cdf[0]):
         return 0.0        
     elif (beta >= cdf[-2]):
         return 1.0
@@ -293,14 +292,14 @@ def build_heritability_cis(h2_values, H2_values, all_distributions, estimated_va
             accept_regions[i,j,2] = get_probabilty_in_closed_interval(H2_values, cdf, accept_regions[i,j,:2])
 
     # Find the first place type I covers 1
-    s = where(numpy.isclose(accept_regions[:,0,2], 1))[0][0]
+    s = where(isclose(accept_regions[:,0,2], 1))[0][0]
 
     # Find the last place type III covers 1
-    t = where(numpy.isclose(accept_regions[:,2,2], 1))[0][-1]
+    t = where(isclose(accept_regions[:,2,2], 1))[0][-1]
     d = int((s+t)/2)
 
     # Find the regions where type II covers exactly 
-    w = where(numpy.isclose(accept_regions[:,1,2], confidence))[0]
+    w = where(isclose(accept_regions[:,1,2], confidence))[0]
 
     # If type II covers a range of h^2, then by definition type I covers before and type III after
     if len(w):
@@ -316,7 +315,7 @@ def build_heritability_cis(h2_values, H2_values, all_distributions, estimated_va
     starts = maximum.accumulate(regions[:,0])
     ends = minimum.accumulate(regions[:,1][::-1])[::-1]
 
-    rng = numpy.random.RandomState(seed)
+    rng = random.RandomState(seed)
 
     # This is relevant only is w is empty, s < t, and use_randomized_cis=True
     u = 1 - (1-confidence) / all_distributions[:, 0]
