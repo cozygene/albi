@@ -13,7 +13,7 @@ class MyArgumentParser(argparse.ArgumentParser):
         sys.exit(2)
 
 SHELL_WIDTH = 70
-VERSION_3 = sys.version_info  >= (3, 0)
+
 ALBI_USAGE  = \
 """
 If you want to build_heritability_cis from a kinship_eigenvalues please specify        %(prog)s --kinship_eigenvalues  [kinship file]        --estimates_filename/--estimate_grid
@@ -22,6 +22,71 @@ If you just want to calculate_probability_intervals please specify              
 
 There are optional arguments you can specify as you can see below:
 """
+
+
+def ioctl_GWINSZ(fd):
+    try:
+        import fcntl, termios, struct
+        _, width = struct.unpack('hh', fcntl.ioctl(fd, termios.TIOCGWINSZ,'1234'))
+    except:
+        return
+    return width
+
+def get_shell_width():
+    width = ioctl_GWINSZ(0)
+
+    if not width:
+        try:
+            fd = os.open(os.ctermid(), os.O_RDONLY)
+            width = ioctl_GWINSZ(fd)
+            os.close(fd)
+        except:
+            pass
+
+    if not width:
+        width = os.environ.get( 'COLUMNS' )
+
+    return width if width else SHELL_WIDTH
+
+
+class ProgressBarIter( object ):
+    def __init__( self, length, stdout = sys.stdout, fill = '#', width = get_shell_width() ):
+        self.length = float(length)
+        if stdout.isatty():
+          self.stdout = stdout
+        else:
+          self.stdout = sys.stdout
+        self.current = 0
+        self.fill = fill
+        self.width = width
+        self.prefix = '| '
+        self.suffix = ' |'
+        self.precentage = " {precentage}%"
+
+    def __iter__( self ):
+        return self
+
+    def __next__( self ): # Python 3 uses __next__ for iterator
+        self.next()
+
+    def next( self ): # Python 2 uses next for iterator
+        self.current += 1
+        precentage = (self.current / self.length )
+        precentage_str = self.precentage.format(precentage = precentage * 100)
+        width_left = self.width - len(self.prefix) - len(self.suffix) - len(precentage_str)
+        process_bar_fill_str = ( '#' * int(precentage * width_left) ).ljust( width_left )
+        self._write( self.prefix + process_bar_fill_str + precentage_str + self.suffix )
+
+        if precentage == 1:
+            raise StopIteration
+
+    def _write( self, line ) :
+        self.stdout.write('\r')
+        self.stdout.write( line )
+        self.stdout.flush()
+
+    def __len__( self ):
+      return self.length
 
 # opt2
 def calculate_probability_intervals( precision_h2, precision_H2, kinship_eigenvalues_data, samples = 1000, distributions_filename = None):
@@ -82,72 +147,6 @@ def _get_estimates( estimate_grid, estimates_filename ):
         estimates = file( args.estimates_filename, 'rb' ).read()
     return estimates
 
-
-
-def ioctl_GWINSZ(fd):
-    try:
-        import fcntl, termios, struct
-        _, width = struct.unpack('hh', fcntl.ioctl(fd, termios.TIOCGWINSZ,'1234'))
-    except:
-        return
-    return width
-
-def get_shell_width():
-    width = ioctl_GWINSZ(0)
-
-    if not width:
-        try:
-            fd = os.open(os.ctermid(), os.O_RDONLY)
-            width = ioctl_GWINSZ(fd)
-            os.close(fd)
-        except:
-            pass
-
-    if not width:
-        width = os.environ.get( 'COLUMNS' )
-
-    return width if width else SHELL_WIDTH
-
-
-
-class ProgressBarIter( object ):
-    def __init__( self, length, stdout = sys.stdout, fill = '#', width = get_shell_width() ):
-        self.length = float(length)
-        if stdout.isatty():
-          self.stdout = stdout
-        else:
-          self.stdout = sys.stdout
-        self.current = 0
-        self.fill = fill
-        self.width = width
-        self.prefix = '| '
-        self.suffix = ' |'
-        self.precentage = " {precentage}%"
-
-    def __iter__( self ):
-        return self
-
-    def __next__( self ): # Python 3 uses __next__ for iterator
-        self.next()
-
-    def next( self ): # Python 2 uses next for iterator
-        self.current += 1
-        precentage = (self.current / self.length )
-        precentage_str = self.precentage.format(precentage = precentage * 100)
-        width_left = self.width - len(self.prefix) - len(self.suffix) - len(precentage_str)
-        process_bar_fill_str = ( '#' * int(precentage * width_left) ).ljust( width_left )
-        self._write( self.prefix + process_bar_fill_str + precentage_str + self.suffix )
-
-        if precentage == 1:
-            raise StopIteration
-
-    def _write( self, line ) :
-        self.stdout.write('\r')
-        self.stdout.write( line )
-        self.stdout.flush()
-
-    def __len__( self ):
-      return self.length
 
 def run_albi( kinship_eigenvalues_filename = None,
               estimate_grid = None,
@@ -247,7 +246,7 @@ if __name__ == '__main__':
     parser.add_argument( '--kinship_eigenvalues',                                                                  help = "path to file containing the eigealues of the kinship matrix" ) 
     group = parser.add_mutually_exclusive_group( required = False )
     group.add_argument(  '--estimates_filename',                     type = str,                                   help = "A filename for the heritability estimates for which we want to build CIs. A text file with one estimate per row." )
-    group.add_argument(  '--estimate_grid',                          type = float,                                 help = "Instead of giving a file with a list of estimates, we can ask ALBI to simply give us CIs over (0,a,2a,3a,...,1), for example with a=0.01. This parameter is the grid size (e.g., 0.01). This flag is mutually exclusive with estimates_filename." )
+    group.add_argument(  '--estimate_grid',                          type = int,                                 help = "How many 'jumps' to ahve between 0 and 1" )
     parser.add_argument( '--save_distributions',                     type = str,                                   help = "default is None. This is a filename to which the program will save the output of calculate_probability_intervals, which is a matrix (take a look at savetxt)." )
     parser.add_argument( '--load_distributions',                     type = str,                                   help = "default is None. This is a filename to which the program will load the output of calculate_probability_intervals, which is a matrix (loadtxt). This flag is mutually exclusive with --input" )
     
