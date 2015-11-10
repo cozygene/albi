@@ -81,7 +81,7 @@ class ProgressBarIter( object ):
             raise StopIteration
 
     def _write( self, line ) :
-        self.stdout.write('\r')
+        self.stdout.write('\r') # cleans up the stdout
         self.stdout.write( line )
         self.stdout.flush()
 
@@ -91,8 +91,8 @@ class ProgressBarIter( object ):
 # opt2
 def calculate_probability_intervals( precision_h2, precision_H2, kinship_eigenvalues_data, samples = 1000, distributions_filename = None):
     print( "Calculating probability intervals..." )
-    distributions =  ALBI.calculate_probability_intervals( h2_values = arange(0, 1 + precision_h2, precision_h2), 
-                                                           H2_values = arange(0, 1 + precision_H2, precision_H2), 
+    distributions =  ALBI.calculate_probability_intervals( h2_values = precision_h2, 
+                                                           H2_values = precision_H2, 
                                                            kinship_eigenvalues = kinship_eigenvalues_data, 
                                                            n_random_samples = samples
                                                          )
@@ -105,8 +105,8 @@ def calculate_probability_intervals( precision_h2, precision_H2, kinship_eigenva
 # opt3 
 def build_heritability_cis_from_distributions( precision_h2, precision_H2, all_distributions_data, estimates, confidence = 0.95, output_filename = None ):
     print( "Building heritability CIs..." )
-    cis =  ALBI.build_heritability_cis( h2_values = arange(0, 1 + precision_h2, precision_h2), 
-                                        H2_values = arange(0, 1 + precision_H2, precision_H2), 
+    cis =  ALBI.build_heritability_cis( h2_values = precision_h2, 
+                                        H2_values = precision_H2,
                                         all_distributions = all_distributions_data, 
                                         estimated_values = estimates, 
                                         confidence = confidence, 
@@ -197,8 +197,8 @@ def run_albi( kinship_eigenvalues_filename = None,
         else:
             # run opt3
             estimates = _get_estimates( estimate_grid, estimates_filename )
-            return build_heritability_cis_from_distributions( precision_h2 = precision_h2,
-                                                              precision_H2 = precision_H2,
+            return build_heritability_cis_from_distributions( precision_h2 = arange(0, 1 + precision_h2, precision_h2),
+                                                              precision_H2 = arange(0, 1 + precision_H2, precision_H2),
                                                               all_distributions_data = loadtxt( load_distributions_filename ), 
                                                               estimates = estimates,
                                                               confidence = confidence,
@@ -219,8 +219,8 @@ def run_albi( kinship_eigenvalues_filename = None,
                 return None
             else:
                 # run opt2
-                return calculate_probability_intervals( precision_h2 = precision_h2,
-                                                        precision_H2 = precision_H2,
+                return calculate_probability_intervals( precision_h2 = arange(0, 1 + precision_h2, precision_h2),
+                                                        precision_H2 = arange(0, 1 + precision_H2, precision_H2),
                                                         kinship_eigenvalues_data = loadtxt( kinship_eigenvalues_filename ),
                                                         samples = ProgressBarIter( samples ),
                                                         distributions_filename = save_distributions_filename
@@ -228,8 +228,8 @@ def run_albi( kinship_eigenvalues_filename = None,
         else:
             # run opt1
             estimates = _get_estimates( estimate_grid, estimates_filename )
-            return build_heritability_cis_from_kinship(  precision_h2 = precision_h2,
-                                                         precision_H2 = precision_H2,
+            return build_heritability_cis_from_kinship(  precision_h2 = arange(0, 1 + precision_h2, precision_h2),
+                                                         precision_H2 = arange(0, 1 + precision_H2, precision_H2),
                                                          kinship_eigenvalues_data = loadtxt( kinship_eigenvalues_filename ),
                                                          estimates = estimates, 
                                                          confidence = confidence,
