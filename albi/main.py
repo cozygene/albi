@@ -12,7 +12,7 @@ class MyArgumentParser(argparse.ArgumentParser):
         print "To see full help: %s -h/--help" % self.prog
         sys.exit(2)
 
-
+SHELL_WIDTH = 70
 ALBI_USAGE  = \
 """
 If you want to build_heritability_cis from a kinship_eigenvalues please specify        %(prog)s --kinship_eigenvalues  [kinship file]        --estimates_filename/--estimate_grid
@@ -80,6 +80,67 @@ def _get_estimates( estimate_grid, estimates_filename ):
     else:
         estimates = file( args.estimates_filename, 'rb' ).read()
     return estimates
+
+
+
+def ioctl_GWINSZ(fd):
+    try:
+        import fcntl, termios, struct
+        _, width = struct.unpack('hh', fcntl.ioctl(fd, termios.TIOCGWINSZ,'1234'))
+    except:
+        return
+    return width
+
+def get_shell_width():
+    width = ioctl_GWINSZ(0)
+
+    if not width:
+        try:
+            fd = os.open(os.ctermid(), os.O_RDONLY)
+            width = ioctl_GWINSZ(fd)
+            os.close(fd)
+        except:
+            pass
+
+    if not width:
+        width = os.environ.get( 'COLUMNS' )
+
+    return width if width else SHELL_WIDTH
+
+
+
+class ProgressBarIter( object ):
+    def __init__( self, length, stdout = sys.stdout, fill = '#', width = get_shell_width() ):
+        self.length = float(length)
+        if stdout.isatty():
+          self.stdout = stdout
+        else:
+          self.stdout = sys.stdout
+        self.current = 0
+        self.fill = fill
+        self.width = width
+        self.prefix = '| '
+        self.suffix = ' |'
+        self.precentage = "{precentage}%".format(kwarg=sub2)
+
+    def __iter__( self ):
+        return self
+
+    def __next__( self ):
+        # def next(self): # Python 3: def __next__(self)
+        precentage = (self.current / self.length )
+        if precentage == 1:
+            raise StopIteration
+        else:
+            self.current += 1
+            precentage_str = self.precentage.format(precentage = precentage * 100)
+            process_bar_fill_str = ( '#'* precentage * self.width ).ljust( self.width - len(self.prefix) - len(self.suffix) - les(precentage_str) )
+            _write( self.prefix + process_bar_fill_str + precentage_str + self.suffix )
+
+    def _write( self, line ) :
+        self.stdout.write('\r')
+        self.stdout.write( line )
+        self.stdout.flush()
 
 def run_albi( kinship_eigenvalues_filename = None,
               estimate_grid = None,
@@ -152,7 +213,7 @@ def run_albi( kinship_eigenvalues_filename = None,
                 return calculate_probability_intervals( precision_h2 = precision_h2,
                                                         precision_H2 = precision_H2,
                                                         kinship_eigenvalues_data = loadtxt( kinship_eigenvalues_filename ),
-                                                        samples = samples,
+                                                        samples = ProgressBarIter( samples ),
                                                         distributions_filename = save_distributions_filename
                                                        )
         else:
@@ -163,7 +224,7 @@ def run_albi( kinship_eigenvalues_filename = None,
                                                          kinship_eigenvalues_data = loadtxt( kinship_eigenvalues_filename ),
                                                          estimates = estimates, 
                                                          confidence = confidence,
-                                                         samples = samples,
+                                                         samples = ProgressBarIter( samples ),
                                                          distributions_filename = save_distributions_filename,
                                                          output_filename = output_filename
                                                        )

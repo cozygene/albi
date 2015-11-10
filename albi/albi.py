@@ -6,9 +6,6 @@ import socket, os.path, cPickle, csv, bisect, time, tempfile, subprocess
 # Ignore divide by 0 warnings
 numpy.seterr(divide='ignore')
 
-# Use progress bar if available
-itrange = locals().get('trange', range)
-
 def weights_zero_derivative(h2_values, H2_values, kinship_eigenvalues, 
                             eigenvectors_as_X=[-1], REML=True):
     """
@@ -67,7 +64,7 @@ def calculate_probability_intervals(h2_values, H2_values, kinship_eigenvalues,
         h2_values - a vector of size N, of all possible values of h^2
         H2_values - a vector of size M, of a grid of possible values of H^2
         kinship_eigenvalues - A vector of size K of the eigenvalues of the kinship matrix, in decreasing order.
-        n_random_samples - The number of random samples to use for the parameteric bootstrap.
+        n_random_samples - The number of random samples to use for the parameteric bootstrap. Can be an int or an iterable with the __len__ func implemented
         eigenvectors_as_X - A list of indices, of which eigenvectors of the kinship matrix are fixed effects.
         REML - True is REML, False if ML.
         seed - A seed for the random generator used for the random samples.
@@ -93,7 +90,10 @@ def calculate_probability_intervals(h2_values, H2_values, kinship_eigenvalues,
     rng = numpy.random.RandomState(seed)
     prob = zeros((len(h2_values), n_intervals+2))
 
-    for i in itrange(n_random_samples):
+    if not hasattr(n_random_samples, '__iter__'):  # assumes that n_random_samples is int
+        n_random_samples = range(n_random_samples)
+
+    for i in n_random_samples:
         # Avoid replicating weights across h2's, so that each sample is independent
         us = rng.normal(size=(monte_carlo_size, len(h2_values), 1, n_samples))
         dotproducts = sum((us**2) * weights[newaxis, :, :, :], 3)     
@@ -107,7 +107,7 @@ def calculate_probability_intervals(h2_values, H2_values, kinship_eigenvalues,
         prob[:, -1] += mean(hit_one, 0)        
         prob[:, 1:-1] += mean(((dotproducts[:, :, :-1] >= 0) & (dotproducts[:, :, 1:] <= 0)) & ~hit_boundary[:, :, newaxis], 0)
         
-    prob /= n_random_samples       # Average across chunks
+    prob /= len(n_random_samples)       # Average across chunks
     prob /= sum(prob, 1)[:, newaxis]   # Normalize so sum is 1, in case of multiple local maxima
     return prob
 
