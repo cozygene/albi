@@ -139,7 +139,7 @@ def build_heritability_cis_from_kinship( precision_h2, precision_H2, kinship_eig
 
 def _get_estimates( estimate_grid, estimates_filename ):
     if estimate_grid:
-        estimates = arange(0, 1 + estimate_grid, estimate_grid) #is that right? TODO
+        estimates = arange(0, 1, 1.0/estimate_grid) #is that right? TODO
     elif not os.path.exists( estimates_filename ) :
         print( "The file '%s' doesn't exist. Exiting" % estimates_filename )
         sys.exit(2)  
