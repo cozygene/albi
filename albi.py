@@ -1,1 +1,1 @@
-albi/main.py
+albi/albi.py
