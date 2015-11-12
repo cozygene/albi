@@ -180,7 +180,7 @@ def run_albi(kinship_eigenvalues_filename = None,
                                                        confidence = confidence,
                                                        samples = progress_bar.ProgressBarIter(samples),
                                                        distributions_filename = save_distributions_filename,
-                                                       output_filename = output_filename
+                                                       output_filename = output_filename)
 
 
 if __name__ == '__main__':
