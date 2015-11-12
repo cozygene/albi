@@ -30,7 +30,6 @@ def estimate_distributions(h2_values, H2_values, kinship_eigenvalues_data, sampl
                                                              kinship_eigenvalues = kinship_eigenvalues_data, 
                                                              n_random_samples = samples)
     
-    print("Done estimating distributions.")
     if distributions_filename:
         header = ['ALBI'] + ['0'] + ["%f-%f" % (H2_values[i], H2_values[i+1]) for i in range(len(H2_values)-1)] + ['1']
         savetxt(fname = distributions_filename, 
@@ -51,7 +50,6 @@ def build_heritability_cis_from_distributions(h2_values, H2_values, all_distribu
                                           estimated_values = estimates, 
                                           confidence = confidence, 
                                           use_randomized_cis = False)
-    print("Done building CIs.")
     if output_filename:
         header = ['Estimate', 'CI_lower_bound', 'CI_upper_bound']
         savetxt(fname = output_filename, 
@@ -180,6 +178,7 @@ def run_albi(kinship_eigenvalues_filename = None,
         else:
             # run opt1
             estimates = _get_estimates(estimate_grid, estimates_filename)
+
             return build_heritability_cis_from_kinship(h2_values = arange(0, 1 + precision_h2, precision_h2),
                                                        H2_values = arange(0, 1 + precision_H2, precision_H2),
                                                        kinship_eigenvalues_data = loadtxt(kinship_eigenvalues_filename),
@@ -196,24 +195,22 @@ if __name__ == '__main__':
     # Parse arguments
     parser = AlbiArgumentParser(prog=os.path.basename(sys.argv[0]),  usage=albi_USAGE)
     
-    group_estimates = parser.add_mutually_exclusive_group(required = False)
-    group_estimates.add_argument('--estimates_filename',                     type = str,                                   help = "A filename for the heritability estimates for which we want to build CIs. A text file with one estimate per row.")
-    group_estimates.add_argument('--estimate_grid',                          type = int,                                 help = "How many 'jumps' to ahve between 0 and 1")
-    
-    parser.add_argument('--save_distributions',                     type = str,                                   help = "default is None. This is a filename to which the program will save the output of calculate_probability_intervals, which is a matrix (take a look at savetxt).")
     group_load = parser.add_mutually_exclusive_group(required = True)
-    group_load.add_argument('--load_distributions',                     type = str,                                   help = "default is None. This is a filename to which the program will load the output of calculate_probability_intervals, which is a matrix (loadtxt). This flag is mutually exclusive with --input")
-    group_load.add_argument('-k', '--kinship_eigenvalues',                                                                  help = "path to file containing the eigealues of the kinship matrix") 
-
-    parser.add_argument('--precision',             nargs = '?',     type = float,   default = 0.01,    help = "default value is 0.1.  the intervals between the h^2 values albi checks")
-    parser.add_argument('--precision2',            nargs = '?',     type = float,   default = 0.01,    help = "default value is 0.1.  I dont know what this is for :p") 
-    parser.add_argument('--samples',               nargs = '?',     type = int,     default = 1000,    help = "default value is 1000. Number of samples albi should take") #   monte_carlo_size
-    parser.add_argument('--confidence',            nargs = '?',     type = float,   default = 0.95,    help = "default value is 0.95. How exact should the resualt CI be (percentage between 0-100")
+    group_load.add_argument('-l', '--load_dist_filename',                     type = str,                                   help = "default is None. This is a filename to which the program will load the output of calculate_probability_intervals, which is a matrix (loadtxt). This flag is mutually exclusive with --input")
+    group_load.add_argument('-k', '--kinship_eigenvalues', help="Filename of a file containing the eigenvalues of the kinship matrix") 
+    parser.add_argument('-p', '--precision',             nargs = '?',     type = float,   default = 0.01,    help = "default value is 0.1.  the intervals between the h^2 values albi checks")
+    parser.add_argument('-d', '--distribution_precision',            nargs = '?',     type = float,   default = 0.01,    help = "default value is 0.1.  I dont know what this is for :p") 
+    parser.add_argument('-n', '--samples',               nargs = '?',     type = int,     default = 1000,    help = "default value is 1000. Number of samples albi should take") #   monte_carlo_size
+    parser.add_argument('-s', '--save_dist_filename',                     type = str,                                   help = "default is None. This is a filename to which the program will save the output of calculate_probability_intervals, which is a matrix (take a look at savetxt).")
     
-    parser.add_argument('--output_filename',                        type = str,                                   help = "default is None. The filename to which we will output the results of albi. A text file of a matrix, where each row is (h^2 estimate, lower bound, upper bound")
+    group_estimates = parser.add_mutually_exclusive_group(required = False)
+    group_estimates.add_argument('-f', '--estimates_filename',                     type = str,                                   help = "A filename for the heritability estimates for which we want to build CIs. A text file with one estimate per row.")
+    group_estimates.add_argument('-g', '--estimate_grid',                          type = int,                                 help = "How many 'jumps' to ahve between 0 and 1")
+    parser.add_argument('-c', '--confidence',            nargs = '?',     type = float,   default = 0.95,    help = "default value is 0.95. How exact should the resualt CI be (percentage between 0-100")
+    parser.add_argument('-o', '--output_filename',                        type = str,                                   help = "default is None. The filename to which we will output the results of albi. A text file of a matrix, where each row is (h^2 estimate, lower bound, upper bound")
 
     group_verbose = parser.add_mutually_exclusive_group(required = False)
-    group_verbose.add_argument('-q', '--quiet',                          default = False, action="store_true", help = "Do not print progress information to screen.")
+    group_verbose.add_argument('-q', '--quiet', default = False, action="store_true", help = "Do not print progress information to screen.")
     
     args = parser.parse_args()
 
@@ -226,14 +223,13 @@ if __name__ == '__main__':
     run_albi(kinship_eigenvalues_filename = args.kinship_eigenvalues,
              estimate_grid = args.estimate_grid, 
              estimates_filename = args.estimates_filename,
-             save_distributions_filename = args.save_distributions,
-             load_distributions_filename = args.load_distributions,
+             save_distributions_filename = args.save_dist_filename,
+             load_distributions_filename = args.load_dist_filename,
              precision_h2 = args.precision,
-             precision_H2 = args.precision2,
+             precision_H2 = args.distribution_precision,
              samples = args.samples,
              confidence = args.confidence,
              output_filename = args.output_filename,
              print_comments = (not args.quiet))
-
 
 
