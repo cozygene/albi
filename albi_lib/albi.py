@@ -180,27 +180,29 @@ def run_albi(kinship_eigenvalues_filename = None,
                                                        confidence = confidence,
                                                        samples = progress_bar.ProgressBarIter(samples),
                                                        distributions_filename = save_distributions_filename,
-                                                       output_filename = output_filename
-                                                       )
+                                                       output_filename = output_filename)
+
 
 if __name__ == '__main__':
     # Parse arguments
     parser = AlbiArgumentParser(prog=os.path.basename(sys.argv[0]),  usage=albi_USAGE)
-    group_estimates = parser.add_mutually_exclusive_group(required = False)
-    group_estimates.add_argument('--estimates_filename',            type = str,                        help = "A filename for the heritability estimates for which we want to build CIs. A text file with one estimate per row.")
-    group_estimates.add_argument('--estimate_grid',                 type = int,                        help = "How many 'jumps' to ahve between 0 and 1")
-    
+        
     group_load = parser.add_mutually_exclusive_group(required = True)
-    group_load.add_argument('--load_distributions',                 type = str,                        help = "default is None. This is a filename to which the program will load the output of calculate_probability_intervals, which is a matrix (loadtxt). This flag is mutually exclusive with --input")
-    group_load.add_argument('-k', '--kinship_eigenvalues',                                             help = "path to file containing the eigealues of the kinship matrix") 
-
-    parser.add_argument('--save_distributions',                     type = str,                        help = "default is None. This is a filename to which the program will save the output of calculate_probability_intervals, which is a matrix (take a look at savetxt).")
-    parser.add_argument('--precision',             nargs = '?',     type = float,   default = 0.01,    help = "default value is 0.1.  the intervals between the h^2 values albi checks")
-    parser.add_argument('--precision2',            nargs = '?',     type = float,   default = 0.01,    help = "default value is 0.1.  I dont know what this is for :p") 
-    parser.add_argument('--samples',               nargs = '?',     type = int,     default = 1000,    help = "default value is 1000. Number of samples albi should take") #   monte_carlo_size
-    parser.add_argument('--confidence',            nargs = '?',     type = float,   default = 0.95,    help = "default value is 0.95. How exact should the resualt CI be (percentage between 0-100")
+    group_load.add_argument('-l', '--load_dist_filename',                     type = str,                                   help = "default is None. This is a filename to which the program will load the output of calculate_probability_intervals, which is a matrix (loadtxt). This flag is mutually exclusive with --input")
+    group_load.add_argument('-k', '--kinship_eigenvalues', help="Filename of a file containing the eigenvalues of the kinship matrix") 
+    parser.add_argument('-p', '--precision',             nargs = '?',     type = float,   default = 0.01,    help = "default value is 0.1.  the intervals between the h^2 values albi checks")
+    parser.add_argument('-d', '--distribution_precision',            nargs = '?',     type = float,   default = 0.01,    help = "default value is 0.1.  I dont know what this is for :p") 
+    parser.add_argument('-n', '--samples',               nargs = '?',     type = int,     default = 1000,    help = "default value is 1000. Number of samples albi should take") #   monte_carlo_size
+    parser.add_argument('-s', '--save_dist_filename',                     type = str,                                   help = "default is None. This is a filename to which the program will save the output of calculate_probability_intervals, which is a matrix (take a look at savetxt).")
     
-    parser.add_argument('--output_filename',                        type = str,                        help = "default is None. The filename to which we will output the results of albi. A text file of a matrix, where each row is (h^2 estimate, lower bound, upper bound")
+    group_estimates = parser.add_mutually_exclusive_group(required = False)
+    group_estimates.add_argument('-f', '--estimates_filename',                     type = str,                                   help = "A filename for the heritability estimates for which we want to build CIs. A text file with one estimate per row.")
+    group_estimates.add_argument('-g', '--estimate_grid',                          type = int,                                 help = "How many 'jumps' to ahve between 0 and 1")
+    parser.add_argument('-c', '--confidence',            nargs = '?',     type = float,   default = 0.95,    help = "default value is 0.95. How exact should the resualt CI be (percentage between 0-100")
+    parser.add_argument('-o', '--output_filename',                        type = str,                                   help = "default is None. The filename to which we will output the results of albi. A text file of a matrix, where each row is (h^2 estimate, lower bound, upper bound")
+
+    group_verbose = parser.add_mutually_exclusive_group(required = False)
+    group_verbose.add_argument('-q', '--quiet', default = False, action="store_true", help = "Do not print progress information to screen.")
     
     args = parser.parse_args()
 
@@ -213,10 +215,10 @@ if __name__ == '__main__':
     run_albi(kinship_eigenvalues_filename = args.kinship_eigenvalues,
              estimate_grid = args.estimate_grid, 
              estimates_filename = args.estimates_filename,
-             save_distributions_filename = args.save_distributions,
-             load_distributions_filename = args.load_distributions,
+             save_distributions_filename = args.save_dist_filename,
+             load_distributions_filename = args.load_dist_filename,
              precision_h2 = args.precision,
-             precision_H2 = args.precision2,
+             precision_H2 = args.distribution_precision,
              samples = args.samples,
              confidence = args.confidence,
              output_filename = args.output_filename)
