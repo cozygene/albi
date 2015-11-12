@@ -50,7 +50,7 @@ Alternatively, you can also clone the repository and do a manual install:
 
 To uninstall, run:
 ```
-    sudo pip uninstall albi
+    sudo -H pip uninstall albi
 ```    
 ## Running ALBI
 
