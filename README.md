@@ -4,7 +4,12 @@ change aruments long name <br/>
 change help and documentation
 albi is everything you need
 
+code for paper: ....
+credits: reut, regev
+
 ## Installation
+
+numpy should be installed
 
 Three installation options:
 
