@@ -181,12 +181,11 @@ def run_albi(kinship_eigenvalues_filename = None,
                                                        samples = progress_bar.ProgressBarIter(samples),
                                                        distributions_filename = save_distributions_filename,
                                                        output_filename = output_filename
-
+                                                       )
 
 if __name__ == '__main__':
     # Parse arguments
     parser = AlbiArgumentParser(prog=os.path.basename(sys.argv[0]),  usage=albi_USAGE)
-    
     group_estimates = parser.add_mutually_exclusive_group(required = False)
     group_estimates.add_argument('--estimates_filename',            type = str,                        help = "A filename for the heritability estimates for which we want to build CIs. A text file with one estimate per row.")
     group_estimates.add_argument('--estimate_grid',                 type = int,                        help = "How many 'jumps' to ahve between 0 and 1")

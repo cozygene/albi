@@ -28,7 +28,7 @@ If you only want to use ALBI as a command line, you can simply download the code
 3. Run ALBI
 
 ```
-   albi.py [flags]
+   python albi.py [flags]
 ```
 
 **Note**: The [NumPy](http://www.numpy.org/) package is required for ALBI.
@@ -55,7 +55,6 @@ To uninstall, run:
 ```    
 
 ## Running
-=======
 
 ### Command Line
 
@@ -69,7 +68,7 @@ albi.py ---kinship_eigenvalues [file] --estimate_grid [number]
 ```
     >>> import albi_lib
     >>> distributions = albi_lib.calculate_probability_intervals(...)
-    >>> cis = albi_lib.build_heritability_cis( distributions, ...)
+    >>> cis = albi_lib.build_heritability_cis(distributions, ...)
 
 ```
 

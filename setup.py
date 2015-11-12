@@ -7,7 +7,5 @@ setup(
       url = 'https://github.com/cozygene/albi',
       description = '',
       packages=['albi_lib'],
-      scripts=['albi.py'],
-      install_requires = ['numpy'],
-      dependency_links = ['https://pypi.python.org/pypi/numpy#downloads']#TODO Add
+      scripts=['albi_lib/albi.py', 'albi_lib/progress_bar.py'],
     )
