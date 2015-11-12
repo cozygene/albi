@@ -358,3 +358,4 @@ def build_heritability_cis(h2_values, H2_values, all_distributions, estimated_va
             cis[i,1] = h2_values[idx-1] + (h2_values[idx] - h2_values[idx-1]) * proportion 
 
     return cis
+
