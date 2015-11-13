@@ -74,9 +74,15 @@ The following command estimates the distributions, and saves the results to a fi
                  --save_dist_filename filename
 ```
 
-Details about each
+The flags are as follows:
 
-prob0/1: It is sometimes useful... precision=1
+* `kinship_eigenvalues` - A file containing the eigenvalues of the kinship matrix, one eigenvalue per line, in text format. This could be created, for example, with GCTA's `--pca` flag.
+* `precision` - The number of grid points of the true heritability values, for which the estimator distributions are estimated. Effectively, this is the precision at which the CIs will be given (e.g., 100 grid points = 0.01 precision). Default is 100.
+* `distribution_precision` - The number of grid points at which each estimator distribution is estimated. This controls the accuracy of estimation. Default is 100.
+* `samples` - Number of random bootstrap samples to use for estimation. Default is 1000.
+* `save_dist_filename` - Filename at which to save the estimated distributions.
+
+One scenario at which the distributions may be useful in themselves, is using the boundary probabilities (0 and 1) for a preliminary assessment of CIs. This follows from the reasoning that narrow CIs translate to narrow boundary probabilities (see paper for more details). To calculate only the boundary probabilities, use `--distribution_precision 1`.
 
 ### 2. Creating CIs from a file with pre-estimated distributions
 
@@ -90,11 +96,17 @@ The following command loads the distributions, builds CIs and saves them to a fi
                   --output_filename filename
 ```
 
-Details
+The flags are as follows:
+
+* `load_dist_filename` - Filename from which to load the estimated distributions.
+* `estimates_filename` - A filename containing a list of heritability estimates (one per line) in text format. A CI will be calculated for each one. 
+* `estimate_grid` - Alternatively, one can ask ALBI to calculate CIs for a grid of heritability estimates (e.g., a grid of 100, will calculate CIs for 0, 0.01, ..., 0.99, 1).
+* `confidence` - The required confidence level for the CIs. Default is 0.95 (95% CIs).
+* `output_filename` - File at which to write the calculated CIs.
 
 ### 3. Performing both steps
 
-Essentially the same, without saving/loading dists
+The two steps may be performed consecutively, without saving or loading the estimated distributions from a file:
 ```
    python albi.py --kinship_eigenvalues filename 
                  [--precision <# of grid points>] 
@@ -107,18 +119,6 @@ Essentially the same, without saving/loading dists
                   --output_filename filename
 ```
 
-Details
-
-### Full list of flags
-
-
-Flag | Short | Value
------------- | -------------
-`kinship_eigenvalues` | -k | Filename
-`precision` | -p | fff
-
-quiet
-
 
 ## Using ALBI as a Python library
 
@@ -128,12 +128,6 @@ quiet
     >>> cis = albi_lib.build_heritability_cis(distributions, ...)
 
 ```
- 
-
-# ALBi // TODO !!
-change aruments long name <br/>
-change help and documentation
-albi is everything you need
 
 
 :hamster:
