@@ -52,8 +52,8 @@ def weights_zero_derivative(h2_values, H2_values, kinship_eigenvalues,
                                       * (ds - sum(ds, 2)[:, :, newaxis] / denom)
 
 
-def calculate_probability_intervals(h2_values, H2_values, kinship_eigenvalues, 
-                                    n_random_samples=100, eigenvectors_as_X=[-1], REML=True, seed=0):
+def estimate_distributions(h2_values, H2_values, kinship_eigenvalues, 
+                           n_random_samples=100, eigenvectors_as_X=[-1], REML=True, seed=0):
     """
     Across a grid of possible estimated values H^2, approximately calculate the probability of either evaluating a boundary 
     estimate (for the boundaries of the grid) or the the estimate falling between each grid points. The probability is 
@@ -242,7 +242,7 @@ def build_heritability_cis(h2_values, H2_values, all_distributions, estimated_va
         H2_values - a vector of size M, of a grid of values of estimated values at which 
                     the estimator distribution is given, for each true value h^2.
         all_distributions - a matrix of size N x (M + 1), where the i-th row is the estimator
-                            distribution of the i-th h^2 value (the output of calculate_probability_intervals)        
+                            distribution of the i-th h^2 value (the output of estimate_distributions)        
         estimated_values - A vector of size P, of estimated heritability values, for which we wish to 
                            calculate confidence intervals.
         confidence - The required confidence level of the CIs we wish to construct (e.g., 95%).

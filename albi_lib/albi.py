@@ -13,7 +13,7 @@ class AlbiArgumentParser(argparse.ArgumentParser):
         print("To see the full help: %s -h/--help" % self.prog)
         sys.exit(2)
 
-albi_USAGE  = \
+albi_USAGE = ""
 """
 If you want to build_heritability_cis from a kinship_eigenvalues please specify        %(prog)s --kinship_eigenvalues  [kinship file]        --estimates_filename/--estimate_grid
 If you want to build_heritability_cis from a distribution file please specify          %(prog)s --load_distributions   [distribuation file]  --estimates_filename/--estimate_grid
@@ -25,12 +25,11 @@ There are optional arguments you can specify as you can see below:
 # opt2
 def estimate_distributions(h2_values, H2_values, kinship_eigenvalues_data, samples = 1000, distributions_filename = None):
     print("Estimating distributions...")
-    distributions = albi_lib.calculate_probability_intervals(h2_values = h2_values, 
+    distributions = albi_lib.estimate_distributions(h2_values = h2_values, 
                                                              H2_values = H2_values, 
                                                              kinship_eigenvalues = kinship_eigenvalues_data, 
                                                              n_random_samples = samples)
     
-    print("Done estimating distributions.")
     if distributions_filename:
         header = ['ALBI'] + ['0'] + ["%f-%f" % (H2_values[i], H2_values[i+1]) for i in range(len(H2_values)-1)] + ['1']
         savetxt(fname = distributions_filename, 
@@ -45,13 +44,12 @@ def estimate_distributions(h2_values, H2_values, kinship_eigenvalues_data, sampl
 # opt3 
 def build_heritability_cis_from_distributions(h2_values, H2_values, all_distributions_data, estimates, confidence = 0.95, output_filename = None):
     print("Building heritability CIs...")
-    cis = albi_lib.build_heritability_cis(h2_values = H2_values, 
+    cis = albi_lib.build_heritability_cis(h2_values = h2_values, 
                                           H2_values = H2_values,
                                           all_distributions = all_distributions_data, 
                                           estimated_values = estimates, 
                                           confidence = confidence, 
                                           use_randomized_cis = False)
-    print("Done building CIs.")
     if output_filename:
         header = ['Estimate', 'CI_lower_bound', 'CI_upper_bound']
         savetxt(fname = output_filename, 
@@ -79,8 +77,6 @@ def build_heritability_cis_from_kinship(h2_values, H2_values, kinship_eigenvalue
                                                       confidence = confidence, 
                                                       output_filename = output_filename
                                                      )
-    print("Done")
-
 
 def _get_estimates(estimate_grid, estimates_filename):
     if estimate_grid:
@@ -103,37 +99,18 @@ def run_albi(kinship_eigenvalues_filename = None,
               samples = 1000,
               confidence = 0.95,
               output_filename = None):
-    """
-    There are three options to run albi:
-    opt1 - build_heritability_cis_from_kinship. The full run of albi. gets a kinship eigenvalues and returns the heritability CIs. (This is actually opt2 + opt3)
-    opt2 - calculate_probability_intervals. gets a kinship eigenvalues and calculate probability intervals (distributions) and saves it for later.
-    opt3 - build_heritability_cis_from_distributions. gets the distributions file from opt2 and returns the heritability CIs.
 
-    This function parses the script arguments and runs the right option according to the specified arguments:
-    for opt1 - you have to specify kinship_eigenvalues + estimates
-    for opt2 - you have to specify kinship_eigenvalues + save_distributions
-    for opt3 - you have to specify load_distributions + estimates
-
-    """
-
-    # if a kinship_eigenvalues wasn't speified - the user wants to run opt3 or he was wrong. If it was specified the user wants to run opt1 or opt2
-    if kinship_eigenvalues_filename is None: # opt3 or error
+    if kinship_eigenvalues_filename is None:
         if load_distributions_filename is None:
-            print("If you want to build_heritability_cis from a kinship_eigenvalues please specify        --kinship_eigenvalues  [kinship file]        --estimates_filename/--estimate_grid\n" \
-                + "If you want to build_heritability_cis from a distribution file please specify          --load_distributions   [distribuation file]  --estimates_filename/--estimate_grid\n" \
-                + "If you just want to calculate_probability_intervals please specify                     --kinship_eigenvalues  [kinship file]        --save_distributions [distribuation file]" 
-               )
+            # TODO: Add error
             return None
         elif not os.path.exists(load_distributions_filename):
             print("The file '%s' doesn't exist. Exiting" % load_distributions_filename) #use logging ifo?TODO
             return None
         elif estimates_filename is None and estimate_grid is None:
-            print("Few arguments are missing.\n" \
-                  + "If you want to build_heritability_cis from a distribution file please also specify --estimate_grid/--estimates_filename"
-                 )
+            # TODO: Add error
             return None
-        else:
-            # run opt3
+        else:            
             estimates = _get_estimates(estimate_grid, estimates_filename)
 
             # Read distributions file
@@ -154,24 +131,18 @@ def run_albi(kinship_eigenvalues_filename = None,
         print("The file '%s' doesn't exist. Exiting" % kinship_eigenvalues_filename)
         return None
 
-    else: # opt1 or opt2
+    else:
         if estimates_filename is None and estimate_grid is None: #opt2 or error
             if save_distributions_filename is None:
-                print("Few arguments are missing.\n" \
-                    + "If you want to build_heritability_cis please also specify --estimate_grid/--estimates_filename.\n" \
-                    + "If you want to calculate_probability_intervals please also specify --save_distributions file"
-                   )
+                # TODO: Add error
                 return None
             else:
-                # run opt2
                 return estimate_distributions(h2_values = arange(0, 1 + precision_h2, precision_h2),
                                               H2_values = arange(0, 1 + precision_H2, precision_H2),
                                               kinship_eigenvalues_data = loadtxt(kinship_eigenvalues_filename),
                                               samples = progress_bar.ProgressBarIter(samples),
-                                              distributions_filename = save_distributions_filename
-                                              )
+                                              distributions_filename = save_distributions_filename)
         else:
-            # run opt1
             estimates = _get_estimates(estimate_grid, estimates_filename)
             return build_heritability_cis_from_kinship(h2_values = arange(0, 1 + precision_h2, precision_h2),
                                                        H2_values = arange(0, 1 + precision_H2, precision_H2),
@@ -185,24 +156,21 @@ def run_albi(kinship_eigenvalues_filename = None,
 
 if __name__ == '__main__':
     # Parse arguments
-    parser = AlbiArgumentParser(prog=os.path.basename(sys.argv[0]),  usage=albi_USAGE)
+    parser = AlbiArgumentParser(prog=os.path.basename(sys.argv[0])) #,  usage=albi_USAGE)
         
-    group_load = parser.add_mutually_exclusive_group(required = True)
-    group_load.add_argument('-l', '--load_dist_filename',                     type = str,                                   help = "default is None. This is a filename to which the program will load the output of calculate_probability_intervals, which is a matrix (loadtxt). This flag is mutually exclusive with --input")
-    group_load.add_argument('-k', '--kinship_eigenvalues', help="Filename of a file containing the eigenvalues of the kinship matrix") 
-    parser.add_argument('-p', '--precision',             nargs = '?',     type = float,   default = 0.01,    help = "default value is 0.1.  the intervals between the h^2 values albi checks")
-    parser.add_argument('-d', '--distribution_precision',            nargs = '?',     type = float,   default = 0.01,    help = "default value is 0.1.  I dont know what this is for :p") 
-    parser.add_argument('-n', '--samples',               nargs = '?',     type = int,     default = 1000,    help = "default value is 1000. Number of samples albi should take") #   monte_carlo_size
-    parser.add_argument('-s', '--save_dist_filename',                     type = str,                                   help = "default is None. This is a filename to which the program will save the output of calculate_probability_intervals, which is a matrix (take a look at savetxt).")
+    group_load = parser.add_mutually_exclusive_group(required=True)
+    group_load.add_argument('-l', '--load_dist_filename',  type=str, help="Filename from which to load the estimated distributions.")
+    group_load.add_argument('-k', '--kinship_eigenvalues', type=str, help="A file containing the eigenvalues of the kinship matrix, one eigenvalue per line, in text format.") 
+    parser.add_argument('-p', '--precision', type=int, default=100, help="The number of grid points of the true heritability values, for which the estimator distributions are estimated. Effectively, this is the precision at which the CIs will be given (e.g., 100 grid points = 0.01 precision).")
+    parser.add_argument('-d', '--distribution_precision', type=int, default=100, help="The number of grid points at which each estimator distribution is estimated. This controls the accuracy of estimation.") 
+    parser.add_argument('-n', '--samples', type=int, default=1000, help="Number of random bootstrap samples to use for estimation.")
+    parser.add_argument('-s', '--save_dist_filename', type=str, help="Filename at which to save the estimated distributions.")
     
-    group_estimates = parser.add_mutually_exclusive_group(required = False)
-    group_estimates.add_argument('-f', '--estimates_filename',                     type = str,                                   help = "A filename for the heritability estimates for which we want to build CIs. A text file with one estimate per row.")
-    group_estimates.add_argument('-g', '--estimate_grid',                          type = int,                                 help = "How many 'jumps' to ahve between 0 and 1")
-    parser.add_argument('-c', '--confidence',            nargs = '?',     type = float,   default = 0.95,    help = "default value is 0.95. How exact should the resualt CI be (percentage between 0-100")
-    parser.add_argument('-o', '--output_filename',                        type = str,                                   help = "default is None. The filename to which we will output the results of albi. A text file of a matrix, where each row is (h^2 estimate, lower bound, upper bound")
-
-    group_verbose = parser.add_mutually_exclusive_group(required = False)
-    group_verbose.add_argument('-q', '--quiet', default = False, action="store_true", help = "Do not print progress information to screen.")
+    group_estimates = parser.add_mutually_exclusive_group(required=False)
+    group_estimates.add_argument('-f', '--estimates_filename', type= str, help="A filename containing a list of heritability estimates (one per line) in text format. A CI will be calculated for each one.")
+    group_estimates.add_argument('-g', '--estimate_grid', type=int, help="A grid of heritability estimates. A CI will be calculated for each one (e.g., a grid of 100, will calculate CIs for 0, 0.01, ..., 0.99, 1).")
+    parser.add_argument('-c', '--confidence', type=float, default=0.95, help = "The required confidence level for the CIs.")
+    parser.add_argument('-o', '--output_filename', type=str, help="File at which to write the calculated CIs.")
     
     args = parser.parse_args()
 
@@ -217,8 +185,8 @@ if __name__ == '__main__':
              estimates_filename = args.estimates_filename,
              save_distributions_filename = args.save_dist_filename,
              load_distributions_filename = args.load_dist_filename,
-             precision_h2 = args.precision,
-             precision_H2 = args.distribution_precision,
+             precision_h2 = 1.0 / args.precision,
+             precision_H2 = 1.0 / args.distribution_precision,
              samples = args.samples,
              confidence = args.confidence,
              output_filename = args.output_filename)
