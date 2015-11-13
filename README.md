@@ -124,11 +124,13 @@ The two steps may be performed consecutively, without saving or loading the esti
 
 ALBI may be used as a Python library. There are two main functions, corresponding to the two stages described above. The Python code is self-documenting:
 
-<sub>
 ```Python
    >>> import albi_lib
    >>> help(albi_lib.estimate_distributions)
-   """
+```
+```
+   estimate_distributions(h2_values, H2_values, kinship_eigenvalues, n_random_samples=100, eigenvectors_as_X=[-1], REML=True, seed=0)
+   
     Across a grid of possible estimated values H^2, approximately calculate the probability of either evaluating a boundary 
     estimate (for the boundaries of the grid) or the the estimate falling between each grid points. The probability is 
     defined for a true value of heritability h^2. The probability is estimated with a parametric bootstrap.
@@ -149,10 +151,13 @@ ALBI may be used as a Python library. There are two main functions, correspondin
         - The cell at index (i, j), for 0<j<M, is the probability of estimate being between the (j-1)-th and j-th grid points;
 
           all of the above are for the i-th h2 value.
-   """
-
+```
+```Python
    >>> help(albi_lib.build_heritability_cis)
-   """
+```
+```
+   build_heritability_cis(h2_values, H2_values, all_distributions, estimated_values, confidence=0.95, use_randomized_cis=False, seed=0)
+
    Build confidence intervals for a set of estimated values, given estimator distributions.
 
     Arguments:
@@ -170,8 +175,6 @@ ALBI may be used as a Python library. There are two main functions, correspondin
 
     Returns:
         A matrix of size (P X 2), of the confidence intervals for each required estimate value.
-   """
 ```
-</sub>
 
 :hamster:
