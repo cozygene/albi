@@ -30,7 +30,6 @@ def estimate_distributions(h2_values, H2_values, kinship_eigenvalues_data, sampl
                                                              kinship_eigenvalues = kinship_eigenvalues_data, 
                                                              n_random_samples = samples)
     
-    print("Done estimating distributions.")
     if distributions_filename:
         header = ['ALBI'] + ['0'] + ["%f-%f" % (H2_values[i], H2_values[i+1]) for i in range(len(H2_values)-1)] + ['1']
         savetxt(fname = distributions_filename, 
@@ -51,7 +50,6 @@ def build_heritability_cis_from_distributions(h2_values, H2_values, all_distribu
                                           estimated_values = estimates, 
                                           confidence = confidence, 
                                           use_randomized_cis = False)
-    print("Done building CIs.")
     if output_filename:
         header = ['Estimate', 'CI_lower_bound', 'CI_upper_bound']
         savetxt(fname = output_filename, 
@@ -79,8 +77,6 @@ def build_heritability_cis_from_kinship(h2_values, H2_values, kinship_eigenvalue
                                                       confidence = confidence, 
                                                       output_filename = output_filename
                                                      )
-    print("Done")
-
 
 def _get_estimates(estimate_grid, estimates_filename):
     if estimate_grid:
