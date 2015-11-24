@@ -85,7 +85,7 @@ def _get_estimates(estimate_grid, estimates_filename):
         print("The file '%s' doesn't exist. Exiting" % estimates_filename)
         sys.exit(2)  
     else:
-        estimates = file(args.estimates_filename, 'rb').read()
+        estimates = loadtxt(args.estimates_filename)
     return estimates
 
 
