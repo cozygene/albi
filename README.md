@@ -11,10 +11,29 @@ ALBI can be used as a command-line program. It can be also used as a Python modu
 The following reads the eigenvalues from a file, calculates 95% CIs over a grid of heritability estimates, and outputs it to a file:
 
 ```
-   python albi.py --kinship_eigenvalues ./data/eigenvalues.txt 
-                  --estimate_grid 100 
+   python albi.py --kinship_eigenvalues ./data/eigenvalues.txt  \
+                  --estimate_grid 100                           \
                   --output_filename cis.txt
 ```
+
+The output is the CIs for heritability estimates of 0, 0.01, ..., 0.99, 1:
+
+```
+Estimate   CI_lower_bound  CI_upper_bound
+0.00000    0.00000         0.65000
+0.01000    0.00000         0.65430
+0.02000    0.00000         0.65860
+0.03000    0.00000         0.73156
+
+...
+
+0.98000    0.39927         1.00000
+0.99000    0.40494         1.00000
+1.00000    0.41000         1.00000
+```
+
+For example, the CI for an estimate of 0.02 is [0, 0.6586].
+
 For more information and options, see below.
 
 ## Installation
