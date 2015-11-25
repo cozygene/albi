@@ -4,7 +4,7 @@ ALBI is a method for the estimation of the distribution of the heritability esti
 
 ALBI's input is the eigenvalues of a kinship matrix, and it produces accurate confidence intervals for a set of heritability estimates.
 
-ALBI can be used as a command-line program. It can be also used as a Python module. Code written by Reut Yedidim and Regev Schweiger. For questions or comments, mail [regevs@gmail.com](mailto:schweiger@post.tau.ac.il).
+ALBI can be used as a command-line program. It can be also used as a Python module. Code written by Reut Yedidim and Regev Schweiger. For questions or comments, mail [schweiger@post.tau.ac.il](mailto:schweiger@post.tau.ac.il).
 
 ### Simple Example
 
