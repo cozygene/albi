@@ -42,10 +42,10 @@ There are several ways to install and use ALBI.
 
 ### 1. Download ZIP
 
-If you only want to use ALBI as a command line, you can simply download the code and run it as a standard program:
+If you only want to use ALBI as a command line tool, you can simply download the code and run it as a standard program:
 
 1. Press the 'Download ZIP' button on the right side of the screen
-2. Extract the ZIP file to folder
+2. Extract the ZIP file to a folder
 3. Run ALBI from the folder:
 ```
    python albi.py [flags]
