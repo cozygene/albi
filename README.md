@@ -1,10 +1,10 @@
 ## ALBI  (*A*ccurate *L*MM-*B*ased Confidence *I*ntervals)
 
-ALBI is a method for the estimation of the distribution of the heritability estimator, and for the construction of accurate confidence intervals (CIs). ALBI can be used as an add-on to existing methods for heritability and variance components estimation. ALBI is described in the following [paper](http://) (upcoming).
+ALBI is a method for the estimation of the distribution of the heritability estimator, and for the construction of accurate confidence intervals (CIs). ALBI can be used as an add-on to existing methods for heritability and variance components estimation. ALBI is described in the following [paper](http://biorxiv.org/content/early/2015/11/24/031492).
 
 ALBI's input is the eigenvalues of a kinship matrix, and it produces accurate confidence intervals for a set of heritability estimates.
 
-ALBI can be used as a command-line program. It can be also used as a Python module. Code written by Reut Yedidim and Regev Schweiger.
+ALBI can be used as a command-line program. It can be also used as a Python module. Code written by Reut Yedidim and Regev Schweiger. For questions or comments, mail [regevs@gmail.com](mailto:schweiger@post.tau.ac.il).
 
 ### Simple Example
 
