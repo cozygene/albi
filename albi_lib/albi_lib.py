@@ -1,4 +1,5 @@
 from numpy import * # for: newaxis, isclose, seterr, random, array, maximum, reshape, ones
+import numpy.linalg
 import bisect
 
 
@@ -107,7 +108,78 @@ def estimate_distributions(h2_values, H2_values, kinship_eigenvalues,
         prob[:, 1:-1] += mean(((dotproducts[:, :, :-1] >= 0) & (dotproducts[:, :, 1:] <= 0)) & ~hit_boundary[:, :, newaxis], 0)
         
     prob /= len(n_random_samples)       # Average across chunks
-    prob /= sum(prob, 1)[:, newaxis]   # Normalize so sum is 1, in case of multiple local maxima
+    prob /= sum(prob, 1)[:, newaxis]   
+    return prob
+
+def estimate_distributions_general(h2_values, H2_values, kinship_eigenvalues, kinship_eigenvectors, covariates,
+                                   n_random_samples=100, eigenvectors_as_X=[-1], REML=True, seed=0):
+    """
+    Across a grid of possible estimated values H^2, approximately calculate the probability of either evaluating a boundary 
+    estimate (for the boundaries of the grid) or the the estimate falling between each grid points. The probability is 
+    defined for a true value of heritability h^2. The probability is estimated with a parametric bootstrap.
+
+    Arguments:
+        h2_values - a vector of size N, of all possible values of h^2
+        H2_values - a vector of size M, of a grid of possible values of H^2
+        kinship_eigenvalues - A vector of size K of the eigenvalues of the kinship matrix, in decreasing order.
+        kinship_eigenvectors - A matrix of size K x K whose columns are the eigenvectors of the kinship matrix, corresponding to the given eigenvalues.
+        covariates - a matrix of size K x P, of P covariates to be used.
+        n_random_samples - The number of random samples to use for the parameteric bootstrap. Can be an int or an iterable with the __len__ func implemented
+        eigenvectors_as_X - A list of indices, of which eigenvectors of the kinship matrix are fixed effects.
+        REML - True is REML, False if ML.
+        seed - A seed for the random generator used for the random samples.
+
+    Returns:
+        A matrix of size N x (M + 1) of the probabilities, where:
+        - The cell at index (i, 0) is the probability of the estimate being smaller than the smallest grid point;
+        - The cell at index (i, M) is the probability of the estimate being larger than the largest grid point;
+        - The cell at index (i, j), for 0<j<M, is the probability of estimate being between the (j-1)-th and j-th grid points;
+
+          all of the above are for the i-th h2 value.
+    """
+    n_samples = len(kinship_eigenvalues)
+    n_intervals = len(H2_values)-1
+
+    rng = random.RandomState(seed)
+    
+    # Make sure the eigenvalues are in decreasing order and nonzero
+    # TODO
+
+    rotated_X = dot(kinship_eigenvectors.T, covariates)
+    prob = zeros((len(h2_values), n_intervals+2))
+
+    if not hasattr(n_random_samples, '__iter__'):  # assumes that n_random_samples is int
+        n_random_samples = range(n_random_samples)
+
+    for i in n_random_samples:
+        dotproducts = zeros([len(h2_values), len(H2_values)])
+        for ih, h2 in enumerate(h2_values):
+            for iH, H2 in enumerate(H2_values):
+
+                u = rng.normal(size=(n_samples, 1))
+                v = (h2*(kinship_eigenvalues-1) + 1)**0.5 * u
+
+                X_XtdXi = dot(rotated_X, linalg.inv(dot(rotated_X.T * (1.0/(H2*(kinship_eigenvalues-1) + 1)), rotated_X)))                
+                Xt_Dv = dot(rotated_X.T, (1.0/(H2*(kinship_eigenvalues-1) + 1) * v))
+                w = v - dot(X_XtdXi, Xt_Dv)
+
+                A = sum(((kinship_eigenvalues-1)) /((H2*(kinship_eigenvalues-1) + 1)**2) * (w**2))
+                B = sum(1.0/(H2*(kinship_eigenvalues-1) + 1) * (w**2))
+
+                dotproducts[ih, iH]
+
+        print dotproducts
+
+        hit_zero = (dotproducts[:, 0] <= 0)
+        hit_one = (dotproducts[:, -1] >= 0)
+        hit_boundary = hit_zero | hit_one
+
+        prob[:, 0] += mean(hit_zero, 0)        
+        prob[:, -1] += mean(hit_one, 0)        
+        prob[:, 1:-1] += mean(((dotproducts[:, :-1] >= 0) & (dotproducts[:, 1:] <= 0)) & ~hit_boundary[:, newaxis], 0)
+        
+    prob /= len(n_random_samples)       # Average across chunks
+    prob /= sum(prob, 1)[:, newaxis]   
     return prob
 
 def quantiles(h2_values, cdf, beta):
