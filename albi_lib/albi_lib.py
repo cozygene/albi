@@ -139,6 +139,7 @@ def estimate_distributions_general(h2_values, H2_values, kinship_eigenvalues, ki
     """
     n_samples = len(kinship_eigenvalues)
     n_intervals = len(H2_values)-1
+    n_covariates = shape(covariates)[1]
 
     rng = random.RandomState(seed)
     
@@ -166,7 +167,17 @@ def estimate_distributions_general(h2_values, H2_values, kinship_eigenvalues, ki
                 A = sum(((kinship_eigenvalues-1)) /((H2*(kinship_eigenvalues-1) + 1)**2) * (w**2))
                 B = sum(1.0/(H2*(kinship_eigenvalues-1) + 1) * (w**2))
 
-                dotproducts[ih, iH]
+                first_logdet = sum((kinship_eigenvalues-1) / (H2*(kinship_eigenvalues-1) + 1))
+                XtdXi = linalg.inv(dot(rotated_X.T * (1.0/(H2*(kinship_eigenvalues-1) + 1)), rotated_X))
+                XtdX2 = dot(rotated_X.T * (-(kinship_eigenvalues-1)/((H2*(kinship_eigenvalues-1) + 1)**2)), rotated_X)
+                second_logdet = sum(XtdXi * XtdX2)
+
+                if REML:
+                    finaldot = A - (first_logdet + second_logdet) * (1.0/(n_samples - n_covariates)) * B 
+                else:
+                    finaldot = A - (first_logdet) * (1.0/n_samples) * B 
+
+                dotproducts[ih, iH] = finaldot
 
         print dotproducts
 
