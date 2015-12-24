@@ -103,6 +103,9 @@ def estimate_distributions(h2_values, H2_values, kinship_eigenvalues,
         hit_one = (dotproducts[:, :, -1] >= 0)
         hit_boundary = hit_zero | hit_one
 
+        print us
+        print dotproducts
+
         prob[:, 0] += mean(hit_zero, 0)        
         prob[:, -1] += mean(hit_one, 0)        
         prob[:, 1:-1] += mean(((dotproducts[:, :, :-1] >= 0) & (dotproducts[:, :, 1:] <= 0)) & ~hit_boundary[:, :, newaxis], 0)
@@ -142,6 +145,8 @@ def estimate_distributions_general(h2_values, H2_values, kinship_eigenvalues, ki
     n_covariates = shape(covariates)[1]
 
     rng = random.RandomState(seed)
+
+    weights = weights_zero_derivative(h2_values, H2_values, kinship_eigenvalues, eigenvectors_as_X=eigenvectors_as_X, REML=REML)
     
     # Make sure the eigenvalues are in decreasing order and nonzero
     # TODO
@@ -153,16 +158,22 @@ def estimate_distributions_general(h2_values, H2_values, kinship_eigenvalues, ki
         n_random_samples = range(n_random_samples)
 
     for i in n_random_samples:
+        realdotproducts = zeros([len(h2_values), len(H2_values)])
         dotproducts = zeros([len(h2_values), len(H2_values)])
         for ih, h2 in enumerate(h2_values):
+            u = rng.normal(size=(n_samples))
             for iH, H2 in enumerate(H2_values):
 
-                u = rng.normal(size=(n_samples, 1))
                 v = (h2*(kinship_eigenvalues-1) + 1)**0.5 * u
 
                 X_XtdXi = dot(rotated_X, linalg.inv(dot(rotated_X.T * (1.0/(H2*(kinship_eigenvalues-1) + 1)), rotated_X)))                
                 Xt_Dv = dot(rotated_X.T, (1.0/(H2*(kinship_eigenvalues-1) + 1) * v))
                 w = v - dot(X_XtdXi, Xt_Dv)
+
+                #print u
+                #print v
+                #print X_XtdXi
+                #print Xt_Dv
 
                 A = sum(((kinship_eigenvalues-1)) /((H2*(kinship_eigenvalues-1) + 1)**2) * (w**2))
                 B = sum(1.0/(H2*(kinship_eigenvalues-1) + 1) * (w**2))
@@ -177,9 +188,11 @@ def estimate_distributions_general(h2_values, H2_values, kinship_eigenvalues, ki
                 else:
                     finaldot = A - (first_logdet) * (1.0/n_samples) * B 
 
+                
                 dotproducts[ih, iH] = finaldot
+                #dotproducts[ih, iH] = sum(weights[ih, iH, :] * (u**2))
 
-        print dotproducts
+                #print realdotproducts[ih, iH] , finaldot
 
         hit_zero = (dotproducts[:, 0] <= 0)
         hit_one = (dotproducts[:, -1] >= 0)
@@ -187,10 +200,11 @@ def estimate_distributions_general(h2_values, H2_values, kinship_eigenvalues, ki
 
         prob[:, 0] += mean(hit_zero, 0)        
         prob[:, -1] += mean(hit_one, 0)        
-        prob[:, 1:-1] += mean(((dotproducts[:, :-1] >= 0) & (dotproducts[:, 1:] <= 0)) & ~hit_boundary[:, newaxis], 0)
+        prob[:, 1:-1] += mean(((dotproducts[:, :-1] >= 0) & (dotproducts[:, 1:] <= 0)) & ~hit_boundary, 0)
         
     prob /= len(n_random_samples)       # Average across chunks
     prob /= sum(prob, 1)[:, newaxis]   
+
     return prob
 
 def quantiles(h2_values, cdf, beta):
