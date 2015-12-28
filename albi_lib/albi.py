@@ -23,9 +23,9 @@ There are optional arguments you can specify as you can see below:
 """
 
 # opt2
-def estimate_distributions(h2_values, H2_values, kinship_eigenvalues_data, samples = 1000, distributions_filename = None):
+def estimate_distributions_eigenvectors(h2_values, H2_values, kinship_eigenvalues_data, samples = 1000, distributions_filename = None):
     print("Estimating distributions...")
-    distributions = albi_lib.estimate_distributions(h2_values = h2_values, 
+    distributions = albi_lib.estimate_distributions_eigenvectors(h2_values = h2_values, 
                                                              H2_values = H2_values, 
                                                              kinship_eigenvalues = kinship_eigenvalues_data, 
                                                              n_random_samples = samples)
@@ -63,12 +63,12 @@ def build_heritability_cis_from_distributions(h2_values, H2_values, all_distribu
 
 # opt1
 def build_heritability_cis_from_kinship(h2_values, H2_values, kinship_eigenvalues_data, estimates, confidence = 0.95, samples = 1000, distributions_filename = None, output_filename = None):
-    distribution = estimate_distributions(h2_values = h2_values,
-                                                     H2_values = H2_values,
-                                                     kinship_eigenvalues_data = kinship_eigenvalues_data,
-                                                     samples = samples,
-                                                     distributions_filename = distributions_filename
-                                                   )
+    distribution = estimate_distributions_eigenvectors(h2_values = h2_values,
+                                                       H2_values = H2_values,
+                                                       kinship_eigenvalues_data = kinship_eigenvalues_data,
+                                                       samples = samples,
+                                                       distributions_filename = distributions_filename
+                                                      )
 
     return build_heritability_cis_from_distributions(h2_values = h2_values,
                                                       H2_values = H2_values, 
@@ -137,7 +137,7 @@ def run_albi(kinship_eigenvalues_filename = None,
                 # TODO: Add error
                 return None
             else:
-                return estimate_distributions(h2_values = arange(0, 1 + precision_h2, precision_h2),
+                return estimate_distributions_eigenvectors(h2_values = arange(0, 1 + precision_h2, precision_h2),
                                               H2_values = arange(0, 1 + precision_H2, precision_H2),
                                               kinship_eigenvalues_data = loadtxt(kinship_eigenvalues_filename),
                                               samples = progress_bar.ProgressBarIter(samples),

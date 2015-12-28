@@ -53,12 +53,14 @@ def weights_zero_derivative(h2_values, H2_values, kinship_eigenvalues,
                                       * (ds - sum(ds, 2)[:, :, newaxis] / denom)
 
 
-def estimate_distributions(h2_values, H2_values, kinship_eigenvalues, 
-                           n_random_samples=100, eigenvectors_as_X=[-1], REML=True, seed=0):
+def estimate_distributions_eigenvectors(h2_values, H2_values, kinship_eigenvalues, 
+                                        n_random_samples=100, eigenvectors_as_X=[-1], REML=True, seed=0):
     """
     Across a grid of possible estimated values H^2, approximately calculate the probability of either evaluating a boundary 
     estimate (for the boundaries of the grid) or the the estimate falling between each grid points. The probability is 
     defined for a true value of heritability h^2. The probability is estimated with a parametric bootstrap.
+
+    Limited to cases where the covariates are eigenvectors of the kinship matrix; but in these cases, calculation is faster.
 
     Arguments:
         h2_values - a vector of size N, of all possible values of h^2
@@ -103,9 +105,6 @@ def estimate_distributions(h2_values, H2_values, kinship_eigenvalues,
         hit_one = (dotproducts[:, :, -1] >= 0)
         hit_boundary = hit_zero | hit_one
 
-        print us
-        print dotproducts
-
         prob[:, 0] += mean(hit_zero, 0)        
         prob[:, -1] += mean(hit_one, 0)        
         prob[:, 1:-1] += mean(((dotproducts[:, :, :-1] >= 0) & (dotproducts[:, :, 1:] <= 0)) & ~hit_boundary[:, :, newaxis], 0)
@@ -115,7 +114,7 @@ def estimate_distributions(h2_values, H2_values, kinship_eigenvalues,
     return prob
 
 def estimate_distributions_general(h2_values, H2_values, kinship_eigenvalues, kinship_eigenvectors, covariates,
-                                   n_random_samples=100, eigenvectors_as_X=[-1], REML=True, seed=0):
+                                   n_random_samples=100, REML=True, seed=0):
     """
     Across a grid of possible estimated values H^2, approximately calculate the probability of either evaluating a boundary 
     estimate (for the boundaries of the grid) or the the estimate falling between each grid points. The probability is 
@@ -128,7 +127,6 @@ def estimate_distributions_general(h2_values, H2_values, kinship_eigenvalues, ki
         kinship_eigenvectors - A matrix of size K x K whose columns are the eigenvectors of the kinship matrix, corresponding to the given eigenvalues.
         covariates - a matrix of size K x P, of P covariates to be used.
         n_random_samples - The number of random samples to use for the parameteric bootstrap. Can be an int or an iterable with the __len__ func implemented
-        eigenvectors_as_X - A list of indices, of which eigenvectors of the kinship matrix are fixed effects.
         REML - True is REML, False if ML.
         seed - A seed for the random generator used for the random samples.
 
@@ -146,10 +144,14 @@ def estimate_distributions_general(h2_values, H2_values, kinship_eigenvalues, ki
 
     rng = random.RandomState(seed)
 
-    weights = weights_zero_derivative(h2_values, H2_values, kinship_eigenvalues, eigenvectors_as_X=eigenvectors_as_X, REML=REML)
+    h2_values = array(h2_values)
+    H2_values = array(H2_values)
     
     # Make sure the eigenvalues are in decreasing order and nonzero
-    # TODO
+    kinship_eigenvalues = maximum(kinship_eigenvalues, 1e-10)
+    reverse_sorted_indices = argsort(kinship_eigenvalues)[::-1]
+    kinship_eigenvalues = array(kinship_eigenvalues)[reverse_sorted_indices]
+    kinship_eigenvectors = array(kinship_eigenvectors)[:, reverse_sorted_indices]
 
     rotated_X = dot(kinship_eigenvectors.T, covariates)
     prob = zeros((len(h2_values), n_intervals+2))
@@ -157,50 +159,56 @@ def estimate_distributions_general(h2_values, H2_values, kinship_eigenvalues, ki
     if not hasattr(n_random_samples, '__iter__'):  # assumes that n_random_samples is int
         n_random_samples = range(n_random_samples)
 
-    for i in n_random_samples:
-        realdotproducts = zeros([len(h2_values), len(H2_values)])
-        dotproducts = zeros([len(h2_values), len(H2_values)])
+    # Size: M X K X P
+    X_XtdXi_matrices = zeros((len(H2_values), n_samples, n_covariates))
+    for iH, H2 in enumerate(H2_values): 
+        X_XtdXi_matrices[iH, :, :] = dot(rotated_X, linalg.inv(dot(rotated_X.T * (1.0/(H2*(kinship_eigenvalues-1) + 1)), rotated_X)))
+
+    # Size: M X P X K
+    Xt_Dv_matrices = zeros((len(H2_values), n_covariates, n_samples))
+    for iH, H2 in enumerate(H2_values): 
+        Xt_Dv_matrices[iH, :, :] = rotated_X.T * (1.0/(H2*(kinship_eigenvalues-1) + 1))
+
+    first_logdets = zeros(len(H2_values))
+    second_logdets = zeros(len(H2_values))
+    B_multipliers = zeros(len(H2_values))
+    for iH, H2 in enumerate(H2_values): 
+        first_logdet = sum((kinship_eigenvalues-1) / (H2*(kinship_eigenvalues-1) + 1))
+        second_logdet = sum(linalg.inv(dot(rotated_X.T * (1.0/(H2*(kinship_eigenvalues-1) + 1)), rotated_X))  *
+                                 dot(rotated_X.T * (-(kinship_eigenvalues-1)/((H2*(kinship_eigenvalues-1) + 1)**2)), rotated_X))
+        if REML:
+            B_multipliers[iH] = (first_logdet + second_logdet) * (1.0/(n_samples - n_covariates))
+        else:
+            B_multipliers[iH] = (first_logdet) * (1.0/n_samples)
+        
+    # Main loop
+    for i in n_random_samples:        
+        # Size N X K
+        us = rng.normal(size=(len(h2_values), n_samples))         
+        vs = ((h2_values[:, newaxis] * (kinship_eigenvalues[newaxis, :] - 1) + 1)**0.5) * us
+
+        # Size N X M X P
+        w1s = tensordot(vs, Xt_Dv_matrices, axes=([1, 2]))
+
+        # Size N X M X K
+        w2s = zeros([len(h2_values), len(H2_values), n_samples])
         for ih, h2 in enumerate(h2_values):
-            u = rng.normal(size=(n_samples))
-            for iH, H2 in enumerate(H2_values):
+            w2s[ih, :, :] = sum(X_XtdXi_matrices * w1s[ih, :, newaxis, :], 2)
 
-                v = (h2*(kinship_eigenvalues-1) + 1)**0.5 * u
+        # Size N X M X K
+        wss = vs[:, newaxis, :] - w2s
+        Ass = sum(((kinship_eigenvalues[newaxis, newaxis, :] - 1)) / ((H2_values[newaxis, :, newaxis] * (kinship_eigenvalues[newaxis, newaxis, :] - 1) + 1)**2) * (wss**2), 2)
+        Bss = sum(1.0/(H2_values[newaxis, :, newaxis] * (kinship_eigenvalues[newaxis, newaxis, :] - 1) + 1) * (wss**2), 2)
 
-                X_XtdXi = dot(rotated_X, linalg.inv(dot(rotated_X.T * (1.0/(H2*(kinship_eigenvalues-1) + 1)), rotated_X)))                
-                Xt_Dv = dot(rotated_X.T, (1.0/(H2*(kinship_eigenvalues-1) + 1) * v))
-                w = v - dot(X_XtdXi, Xt_Dv)
-
-                #print u
-                #print v
-                #print X_XtdXi
-                #print Xt_Dv
-
-                A = sum(((kinship_eigenvalues-1)) /((H2*(kinship_eigenvalues-1) + 1)**2) * (w**2))
-                B = sum(1.0/(H2*(kinship_eigenvalues-1) + 1) * (w**2))
-
-                first_logdet = sum((kinship_eigenvalues-1) / (H2*(kinship_eigenvalues-1) + 1))
-                XtdXi = linalg.inv(dot(rotated_X.T * (1.0/(H2*(kinship_eigenvalues-1) + 1)), rotated_X))
-                XtdX2 = dot(rotated_X.T * (-(kinship_eigenvalues-1)/((H2*(kinship_eigenvalues-1) + 1)**2)), rotated_X)
-                second_logdet = sum(XtdXi * XtdX2)
-
-                if REML:
-                    finaldot = A - (first_logdet + second_logdet) * (1.0/(n_samples - n_covariates)) * B 
-                else:
-                    finaldot = A - (first_logdet) * (1.0/n_samples) * B 
-
-                
-                dotproducts[ih, iH] = finaldot
-                #dotproducts[ih, iH] = sum(weights[ih, iH, :] * (u**2))
-
-                #print realdotproducts[ih, iH] , finaldot
+        dotproducts = Ass - B_multipliers[newaxis, :] * Bss
 
         hit_zero = (dotproducts[:, 0] <= 0)
         hit_one = (dotproducts[:, -1] >= 0)
         hit_boundary = hit_zero | hit_one
 
-        prob[:, 0] += mean(hit_zero, 0)        
-        prob[:, -1] += mean(hit_one, 0)        
-        prob[:, 1:-1] += mean(((dotproducts[:, :-1] >= 0) & (dotproducts[:, 1:] <= 0)) & ~hit_boundary, 0)
+        prob[:, 0] += hit_zero        
+        prob[:, -1] += hit_one
+        prob[:, 1:-1] += ((dotproducts[:, :-1] >= 0) & (dotproducts[:, 1:] <= 0)) & ~hit_boundary[:, newaxis]
         
     prob /= len(n_random_samples)       # Average across chunks
     prob /= sum(prob, 1)[:, newaxis]   
