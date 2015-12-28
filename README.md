@@ -101,6 +101,8 @@ The flags are as follows:
 * `samples` - Number of random bootstrap samples to use for estimation. Default is 1000.
 * `save_dist_filename` - Filename at which to save the estimated distributions.
 
+**Support for general covariates is already available at the Python package and will be added to the command line interface soon.**
+
 One scenario at which the distributions may be useful in themselves, is using the boundary probabilities (0 and 1) for a preliminary assessment of CIs. This follows from the reasoning that narrow CIs translate to small boundary probabilities (see paper for more details). To calculate only the boundary probabilities, use `--distribution_precision 1`.
 
 ### 2. Creating CIs from a file with pre-estimated distributions
@@ -141,18 +143,20 @@ The two steps may be performed consecutively, without saving or loading the esti
 
 ## Using ALBI as a Python library
 
-ALBI may be used as a Python library. There are two main functions, corresponding to the two stages described above. The Python code is self-documenting:
+ALBI may be used as a Python library. There are three main functions, corresponding to the two stages described above. The Python code is self-documenting:
 
 ```Python
    >>> import albi_lib
-   >>> help(albi_lib.estimate_distributions)
+   >>> help(albi_lib.estimate_distributions_eigenvectors)
 ```
 ```
-   estimate_distributions(h2_values, H2_values, kinship_eigenvalues, n_random_samples=100, eigenvectors_as_X=[-1], REML=True, seed=0)
+   estimate_distributions_eigenvectors(h2_values, H2_values, kinship_eigenvalues, n_random_samples=100, eigenvectors_as_X=[-1], REML=True, seed=0)
    
     Across a grid of possible estimated values H^2, approximately calculate the probability of either evaluating a boundary 
     estimate (for the boundaries of the grid) or the the estimate falling between each grid points. The probability is 
     defined for a true value of heritability h^2. The probability is estimated with a parametric bootstrap.
+
+    Limited to cases where the covariates are eigenvectors of the kinship matrix; but in these cases, calculation is faster.
 
     Arguments:
         h2_values - a vector of size N, of all possible values of h^2
@@ -169,6 +173,34 @@ ALBI may be used as a Python library. There are two main functions, correspondin
         - The cell at index (i, M) is the probability of the estimate being larger than the largest grid point;
         - The cell at index (i, j), for 0<j<M, is the probability of estimate being between the (j-1)-th and j-th grid points;
 
+          all of the above are for the i-th h2 value.
+```
+```Python
+   >>> import albi_lib
+   >>> help(albi_lib.estimate_distributions_general)
+```
+```
+   estimate_distributions_general(h2_values, H2_values, kinship_eigenvalues, kinship_eigenvectors, covariates, n_random_samples=100, REML=True, seed=0)
+    Across a grid of possible estimated values H^2, approximately calculate the probability of either evaluating a boundary 
+    estimate (for the boundaries of the grid) or the the estimate falling between each grid points. The probability is 
+    defined for a true value of heritability h^2. The probability is estimated with a parametric bootstrap.
+    
+    Arguments:
+        h2_values - a vector of size N, of all possible values of h^2
+        H2_values - a vector of size M, of a grid of possible values of H^2
+        kinship_eigenvalues - A vector of size K of the eigenvalues of the kinship matrix, in decreasing order.
+        kinship_eigenvectors - A matrix of size K x K whose columns are the eigenvectors of the kinship matrix, corresponding to the given eigenvalues.
+        covariates - a matrix of size K x P, of P covariates to be used.
+        n_random_samples - The number of random samples to use for the parameteric bootstrap. Can be an int or an iterable with the __len__ func implemented
+        REML - True is REML, False if ML.
+        seed - A seed for the random generator used for the random samples.
+    
+    Returns:
+        A matrix of size N x (M + 1) of the probabilities, where:
+        - The cell at index (i, 0) is the probability of the estimate being smaller than the smallest grid point;
+        - The cell at index (i, M) is the probability of the estimate being larger than the largest grid point;
+        - The cell at index (i, j), for 0<j<M, is the probability of estimate being between the (j-1)-th and j-th grid points;
+    
           all of the above are for the i-th h2 value.
 ```
 ```Python
