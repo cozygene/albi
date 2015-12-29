@@ -47,10 +47,9 @@ class ProgressBarIter(object):
         return self
 
     def __next__(self): # Python 3 uses __next__ for iterator
-        self.next()
+        return self.next()
 
     def next(self): # Python 2 uses next for iterator
-        self.current += 1
         percentage = (self.current / self.length)
         percentage_str = self.percentage.format(percentage = percentage * 100)
         width_left = self.width - len(self.prefix) - len(self.suffix) - len(percentage_str)
@@ -59,6 +58,9 @@ class ProgressBarIter(object):
 
         if percentage == 1:
             raise StopIteration
+
+        self.current += 1
+        return percentage
 
     def _write(self, line) :
         self.stdout.write('\r') # cleans up the stdout
