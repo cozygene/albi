@@ -2,39 +2,38 @@
 
 ALBI is a method for the estimation of the distribution of the heritability estimator, and for the construction of accurate confidence intervals (CIs). ALBI can be used as an add-on to existing methods for heritability and variance components estimation. ALBI is described in the following [paper](http://biorxiv.org/content/early/2015/11/24/031492).
 
-ALBI's input is the eigenvalues of a kinship matrix, and it produces accurate confidence intervals for a set of heritability estimates.
+ALBI's input is the eigenvalues of a kinship matrix (possibly, also its eigenvectors, and general covariates), and it produces accurate confidence intervals for a set of heritability estimates.
 
 ALBI can be used as a command-line program. It can be also used as a Python module. Code written by Reut Yedidim and Regev Schweiger. For questions or comments, mail [schweiger@post.tau.ac.il](mailto:schweiger@post.tau.ac.il).
 
 ### Simple Example
 
-The following reads the eigenvalues from a file, calculates 95% CIs over a grid of heritability estimates, and outputs it to a file:
+The following reads the eigenvalues from a file, calculates 95% CIs over a grid of heritability estimates, and outputs it:
 
 ```
    python albi.py --kinship_eigenvalues ./data/eigenvalues.txt  \
-                  --estimate_grid 100                           \
-                  --output_filename cis.txt
 ```
 
-The output is the CIs for heritability estimates of 0, 0.01, ..., 0.99, 1:
+The default output is the CIs for heritability estimates of 0, 0.1, ..., 0.9, 1:
 
 ```
 Estimate   CI_lower_bound  CI_upper_bound
-0.00000    0.00000         0.65000
-0.01000    0.00000         0.65430
-0.02000    0.00000         0.65860
-0.03000    0.00000         0.73156
-
-...
-
-0.98000    0.39927         1.00000
-0.99000    0.40494         1.00000
-1.00000    0.41000         1.00000
+0.00000	0.00000	0.65000
+0.10000	0.00000	0.79667
+0.20000	0.00000	0.89600
+0.30000	0.00000	1.00000
+0.40000	0.00000	1.00000
+0.50000	0.05000	1.00000
+0.60000	0.09930	1.00000
+0.70000	0.16571	1.00000
+0.80000	0.23429	1.00000
+0.90000	0.33000	1.00000
+1.00000	0.41000	1.00000
 ```
 
-For example, the CI for an estimate of 0.02 is [0, 0.6586].
+For example, the CI for an estimate of 0.1 is [0, 0.79667].
 
-For more information and options, see below.
+If you use covariates or you generated your matrix in a non-standard way, you would need additional flags. For more information and options, see below.
 
 ## Installation
 
@@ -65,6 +64,9 @@ Alternatively, you can also clone the repository and do a manual install:
    git clone https://github.com/cozygene/albi
    sudo python setup.py install
 ```
+
+Note: If you are using anaconda, you could replace `sudo pip` and `sudo python` with the path to the binaries in the `bin` directory in your anaconda installation.
+
 ### Uninstalling
 
 To uninstall, run:
@@ -84,26 +86,63 @@ The two stages may be performed together, or they may be performed separately, w
 
 ### 1. Estimating distributions and saving the results
 
+There are two use cases, and it is important to distinguish between them: The case where all covariates are eigenvectors of the kinship matrix (this often includes the intercept!); and the case of general covariates. The first case allows for simpler and faster computation, while the second is more general.
+
+#### 1. All covariates are eigenvectors 
+
+Where all covariates are eigenvectors of the kinship matrix, there is a simple closed-form formula that produces faster computations. Another nice side effect is that, in this case, the eigenvectors themselves are not needed; only the eigenvalues, and the identity of the eigenvectors that are used as covariates, is needed. In particular, this includes the following special cases:
+
+1. Only an **intercept term** (a vector of ones). This is the default in e.g., GCTA. Since the genotype matrix is mean-centered, it follows that the vector of ones is an eigenvector, corresponding to the last (smallest) eigenvector of the kinship matrix (see Supplemental Note S4.5 in paper). If you built your kinship matrix with default settings, this is probably the case relevant to you.
+2. **No fixed effects** at all (including an intercept). 
+3. In addition to an intercept term, a common practice is adding as fixed effects the q **largest principal components**, corresponding to the first q eigenvectors of the kinship matrix.
+
 The following command estimates the distributions, and saves the results to a file:
 ```
-   python albi.py --kinship_eigenvalues filename 
+   python albi.py --kinship_eigenvalues filename
+                 [--use_eigenvectors_as_covariates <list of #>]
                  [--precision <# of grid points>] 
                  [--distribution_precision <# of grid points>] 
                  [--samples <# of random samples>] 
-                 --save_dist_filename filename
+                  --save_dist_filename filename
 ```
 
 The flags are as follows:
 
-* `kinship_eigenvalues` - A file containing the eigenvalues of the kinship matrix, one eigenvalue per line, in text format. This could be created, for example, with GCTA's `--pca` flag.
-* `precision` - The number of grid points of the true heritability values, for which the estimator distributions are estimated. Effectively, this is the precision at which the CIs will be given (e.g., 100 grid points = 0.01 precision). Default is 100.
-* `distribution_precision` - The number of grid points at which each estimator distribution is estimated. This controls the accuracy of estimation. Default is 100.
-* `samples` - Number of random bootstrap samples to use for estimation. Default is 1000.
-* `save_dist_filename` - Filename at which to save the estimated distributions.
+* `kinship_eigenvalues` (Shortcut: `-k`) - A file containing the eigenvalues of the kinship matrix, one eigenvalue per line, in text format. This could be created, for example, with GCTA's `--pca` flag.
+* `use_eigenvectors_as_covariates` (`-u`) - A list detailing which eigenvectors should be used as covariates. For example: If you only use an intercept term, and your kinship matrix was constructed from a standardized SNP matrix, use `-1` (the last eigenvector is equal to the constant vector); if in addition, you add the first 3 PCs as covariates, use `0,1,2,-1`. Default is `-1`.
+* `precision` (`-p`) - The number of grid points of the true heritability values, for which the estimator distributions are estimated. Effectively, this is the precision at which the CIs will be given (e.g., 100 grid points = 0.01 precision). Default is 100.
+* `distribution_precision` (`-d`) - The number of grid points at which each estimator distribution is estimated. This controls the accuracy of estimation. Default is 100.
+* `samples` (`-n`) - Number of random bootstrap samples to use for estimation. Default is 1000.
+* `save_dist_filename` (`-s`) - Filename at which to save the estimated distributions.
 
-**Support for general covariates is already available at the Python package and will be added to the command line interface soon.**
+The file format of the saved distributions is textual and self explanatory, and therefore may be easier used for direct anaylsis, is required.
 
 One scenario at which the distributions may be useful in themselves, is using the boundary probabilities (0 and 1) for a preliminary assessment of CIs. This follows from the reasoning that narrow CIs translate to small boundary probabilities (see paper for more details). To calculate only the boundary probabilities, use `--distribution_precision 1`.
+
+#### 2. General covariates
+
+When covariates are not eigenvectors of the kinship matrix, you must supply both the eigenvalues, the eigenvectors and the covariates explicitly. Computation will be slower (although still linear in the number of individuals):
+
+The following command estimates the distributions, and saves the results to a file:
+```
+   python albi.py --kinship_eigenvalues filename
+                  --kinship_eigenvectors filename
+                  --covariates filename
+                 [--precision <# of grid points>] 
+                 [--distribution_precision <# of grid points>] 
+                 [--samples <# of random samples>] 
+                  --save_dist_filename filename
+```
+
+The flags are as follows:
+
+* `kinship_eigenvalues` (`-k`) - A file containing the eigenvalues of the kinship matrix, one eigenvalue per line, in text format. This could be created, for example, with GCTA's `--pca` flag.
+* `kinship_eigenvectors`(`-v`) - A file containing the eigenvectors of the kinship matrix, one eigenvector per column, in text format. This could be created, for example, with GCTA's `--pca` flag.
+* `covariates` (`-x`) - A file containing the covariates, one covariate per column, in text format. Remember to include a constant column if you used an intercept term.
+* `precision` (`-p`) - The number of grid points of the true heritability values, for which the estimator distributions are estimated. Effectively, this is the precision at which the CIs will be given (e.g., 100 grid points = 0.01 precision). Default is 100.
+* `distribution_precision` (`-d`) - The number of grid points at which each estimator distribution is estimated. This controls the accuracy of estimation. Default is 100.
+* `samples` (`-n`) - Number of random bootstrap samples to use for estimation. Default is 1000.
+* `save_dist_filename` (`-s`) - Filename at which to save the estimated distributions.
 
 ### 2. Creating CIs from a file with pre-estimated distributions
 
@@ -114,36 +153,59 @@ The following command loads the distributions, builds CIs and saves them to a fi
                     or
                   --estimate_grid <# of grid points>)
                  [--confidence <required confidence level>] 
-                  --output_filename filename
+                 [--output_filename filename]
 ```
 
 The flags are as follows:
 
-* `load_dist_filename` - Filename from which to load the estimated distributions.
-* `estimates_filename` - A filename containing a list of heritability estimates (one per line) in text format. A CI will be calculated for each one. 
-* `estimate_grid` - Alternatively, one can ask ALBI to calculate CIs for a grid of heritability estimates (e.g., a grid of 100, will calculate CIs for 0, 0.01, ..., 0.99, 1).
-* `confidence` - The required confidence level for the CIs. Default is 0.95 (95% CIs).
-* `output_filename` - File at which to write the calculated CIs.
+* `load_dist_filename` (`-l`) - Filename from which to load the estimated distributions.
+* `estimates_filename` (`-f`) - A filename containing a list of heritability estimates (one per line) in text format. A CI will be calculated for each one. 
+* `estimate_grid` (`-g`) - Alternatively, one can ask ALBI to calculate CIs for a grid of heritability estimates (e.g., a grid of 100, will calculate CIs for 0, 0.01, ..., 0.99, 1). Default is 10.
+* `confidence` (`-c`) - The required confidence level for the CIs. Default is 0.95 (95% CIs).
+* `output_filename` (`-o`) - File to which to write the calculated CIs. If not supplied, CIs will be printed.
+
+
 
 ### 3. Performing both steps
 
 The two steps may be performed consecutively, without saving or loading the estimated distributions from a file:
 ```
    python albi.py --kinship_eigenvalues filename 
+                 [--use_eigenvectors_as_covariates <list of #>]
                  [--precision <# of grid points>] 
                  [--distribution_precision <# of grid points>] 
                  [--samples <# of random samples>] 
-                 (--estimates_filename filename] 
+                 (--estimates_filename filename
                     or
                   --estimate_grid <# of grid points>)
                  [--confidence <required confidence level>] 
-                  --output_filename filename
+                 [--output_filename filename]
 ```
 
+or 
+
+```
+   python albi.py --kinship_eigenvalues filename
+                  --kinship_eigenvectors filename
+                  --covariates filename
+                 [--precision <# of grid points>] 
+                 [--distribution_precision <# of grid points>] 
+                 [--samples <# of random samples>] 
+                 (--estimates_filename filename 
+                    or
+                  --estimate_grid <# of grid points>)
+                 [--confidence <required confidence level>] 
+                 [--output_filename filename]
+```
 
 ## Using ALBI as a Python library
 
-ALBI may be used as a Python library. There are three main functions, corresponding to the two stages described above. The Python code is self-documenting:
+ALBI may be used as a Python library. It contains more feature that are not yet available at the command line interface:
+* Using ML instead of REML
+* Setting the random seed(s)
+* Using randomized CIs (see Supplemental Note S5.3 in paper)
+
+There are three main functions, corresponding to the two stages described above. The Python code is self-documenting:
 
 ```Python
    >>> import albi_lib
