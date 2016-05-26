@@ -364,7 +364,7 @@ def build_heritability_cis(h2_values, H2_values, all_distributions, estimated_va
     for i,h2 in enumerate(h2_values):
         cdf = cumsum(all_distributions[i,:])        
         
-        accept_regions[i,0,1] = 0.0
+        accept_regions[i,0,0] = 0.0
         accept_regions[i,0,1] = quantiles(H2_values, cdf, 1-alpha)
 
         accept_regions[i,1,0] = quantiles(H2_values, cdf, alpha/2)
