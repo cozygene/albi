@@ -1,4 +1,4 @@
-## ALBI  (*A*ccurate *L*MM-*B*ased Confidence *I*ntervals)
+## ALBI  (*A*ccurate *L*MM-based heritability *B*ootstrap confidence *I*ntervals)
 
 ALBI is a method for the estimation of the distribution of the heritability estimator, and for the construction of accurate confidence intervals (CIs). ALBI can be used as an add-on to existing methods for heritability and variance components estimation. ALBI is described in the following [paper](http://biorxiv.org/content/early/2015/11/24/031492).
 
