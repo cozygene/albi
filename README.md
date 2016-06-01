@@ -43,7 +43,7 @@ There are several ways to install and use ALBI.
 
 If you only want to use ALBI as a command line tool, you can simply download the code and run it as a standard program:
 
-1. Press the 'Download ZIP' button on the right side of the screen
+1. Download the ZIP file of the latest release here: [https://github.com/cozygene/albi/releases](https://github.com/cozygene/albi/releases).
 2. Extract the ZIP file to a folder
 3. Run ALBI from the folder:
 ```
