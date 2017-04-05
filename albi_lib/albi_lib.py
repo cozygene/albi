@@ -6,52 +6,84 @@ import bisect
 # Ignore divide by 0 warnings
 seterr(divide='ignore')
 
+class DerivativeSignCalculator(object):
+    """
+    An abstract class to calculate the sign of the derivative of the likelihood
+    under various settings.
+    """
+    def get_derivative_signs(us):
+        raise NotImplementedError("Should be overrided")
+
+class OnlyEigenvectorsDerivativeSignCalculator(DerivativeSignCalculator):
+    def __init__(self, h2_values, H2_values, kinship_eigenvalues, 
+                       eigenvectors_as_X=[-1], REML=True):
+        """
+        Calculates the weights in the expression of the derivative of the likelihood, in the case that
+        the fixed effects X are eigenvectors of the kinship matrix. Each weight is parametrized by 
+        three parameters: (i) h^2 - the true value of heritability; (ii) H^2 - the estimated value; 
+        (iii) - an index.
+
+        Arguments:
+            h2_values - a vector of size N, of all possible values of h^2
+            H2_values - a vector of size M, of all possible values of H^2
+            kinship_eigenvalues - A vector of size K of the eigenvalues of the kinship matrix, in decreasing order.
+            eigenvectors_as_X - A list of indices, of which eigenvectors of the kinship matrix are fixed effects.
+            REML - True is REML, False if ML.
+
+        Calculates the weights -
+            A matrix of size N x M x K, of the weights for the cartesian product of h2_values, H2_values and an index.
+        """
+        # Set the shapes accordingly, so vectorization will work
+        if eigenvectors_as_X is None:
+            eigenvectors_as_X = []
+        if isinstance(h2_values, int) or isinstance(h2_values, float):
+            h2_values = [h2_values]
+        if isinstance(H2_values, int) or isinstance(H2_values, float):
+            H2_values = [H2_values]
+        n_samples = len(kinship_eigenvalues)
+
+        H2_values = reshape(H2_values, (1, len(H2_values), 1))
+        h2_values = reshape(h2_values, (len(h2_values), 1, 1))
+        kinship_eigenvalues = reshape(kinship_eigenvalues, (1, 1, n_samples))
+
+        # Calculate weights
+        projection = ones((1, 1, n_samples))
+        projection[0, 0, eigenvectors_as_X] = 0
+        
+        ds = (kinship_eigenvalues - 1) / (H2_values * (kinship_eigenvalues - 1) + 1)
+        denom = n_samples
+
+        if REML:
+            ds = projection * (kinship_eigenvalues - 1) / (H2_values * (kinship_eigenvalues-1) + 1)
+            denom = n_samples - len(eigenvectors_as_X)
+
+        self.weights = projection * (h2_values * (kinship_eigenvalues - 1) + 1) / \
+                                    (H2_values * (kinship_eigenvalues - 1) + 1) \
+                                     * (ds - sum(ds, 2)[:, :, newaxis] / denom)
+
+    def get_derivative_signs(self, us):
+        """
+        Get the signs of the derivative for the supplied vectors.
+
+        Arguments:
+            us - a matrix of size T X N X K, of T X N vectors (T vectors per N of all possible values of h^2)
+
+        Returns:
+            A matrix of size T X N X M of the derivative signs of each vector at the M given H2 points
+        """
+        assert shape(us)[1] == shape(self.weights)[0]
+        assert shape(us)[2] == shape(self.weights)[2]
+
+        us = us[:,:,newaxis,:]
+        dotproducts = sum((us**2) * self.weights[newaxis, :, :, :], 3)   
+
+        return sign(dotproducts)
+
+# Retain for backward compatibility
 def weights_zero_derivative(h2_values, H2_values, kinship_eigenvalues, 
                             eigenvectors_as_X=[-1], REML=True):
-    """
-    Calculates the weights in the expression of the derivative of the likelihood, in the case that
-    the fixed effects X are eigenvectors of the kinship matrix. Each weight is parametrized by 
-    three parameters: (i) h^2 - the true value of heritability; (ii) H^2 - the estimated value; 
-    (iii) - an index.
-
-    Arguments:
-        h2_values - a vector of size N, of all possible values of h^2
-        H2_values - a vector of size M, of all possible values of H^2
-        kinship_eigenvalues - A vector of size K of the eigenvalues of the kinship matrix, in decreasing order.
-        eigenvectors_as_X - A list of indices, of which eigenvectors of the kinship matrix are fixed effects.
-        REML - True is REML, False if ML.
-
-    Returns:
-        A matrix of size N x M x K, of the weights for the cartesian product of h2_values, H2_values and an index.
-    """
-    # Set the shapes accordingly, so vectorization will work
-    if eigenvectors_as_X is None:
-        eigenvectors_as_X = []
-    if isinstance(h2_values, int) or isinstance(h2_values, float):
-        h2_values = [h2_values]
-    if isinstance(H2_values, int) or isinstance(H2_values, float):
-        H2_values = [H2_values]
-    n_samples = len(kinship_eigenvalues)
-
-    H2_values = reshape(H2_values, (1, len(H2_values), 1))
-    h2_values = reshape(h2_values, (len(h2_values), 1, 1))
-    kinship_eigenvalues = reshape(kinship_eigenvalues, (1, 1, n_samples))
-
-    # Calculate weights
-    projection = ones((1, 1, n_samples))
-    projection[0, 0, eigenvectors_as_X] = 0
+    return OnlyEigenvectorsDerivativeSignCalculator(h2_values, H2_values, kinship_eigenvalues, eigenvectors_as_X=[-1], REML=True).weights
     
-    ds = (kinship_eigenvalues - 1) / (H2_values * (kinship_eigenvalues - 1) + 1)
-    denom = n_samples
-
-    if REML:
-        ds = projection * (kinship_eigenvalues - 1) / (H2_values * (kinship_eigenvalues-1) + 1)
-        denom = n_samples - len(eigenvectors_as_X)
-
-    return projection * (h2_values * (kinship_eigenvalues - 1) + 1) / \
-                        (H2_values * (kinship_eigenvalues - 1) + 1) \
-                                      * (ds - sum(ds, 2)[:, :, newaxis] / denom)
-
 
 def estimate_distributions_eigenvectors(h2_values, H2_values, kinship_eigenvalues, 
                                         n_random_samples=100, eigenvectors_as_X=[-1], REML=True, seed=0):
@@ -87,7 +119,7 @@ def estimate_distributions_eigenvectors(h2_values, H2_values, kinship_eigenvalue
     kinship_eigenvalues = array(sorted(maximum(kinship_eigenvalues, 1e-10)))[::-1]
 
     # Size: N X M X K
-    weights = weights_zero_derivative(h2_values, H2_values, kinship_eigenvalues, eigenvectors_as_X=eigenvectors_as_X, REML=REML)
+    sign_calculator = OnlyEigenvectorsDerivativeSignCalculator(h2_values, H2_values, kinship_eigenvalues, eigenvectors_as_X=eigenvectors_as_X, REML=REML)
     
     rng = random.RandomState(seed)
     prob = zeros((len(h2_values), n_intervals+2))
@@ -97,8 +129,8 @@ def estimate_distributions_eigenvectors(h2_values, H2_values, kinship_eigenvalue
 
     for i in n_random_samples:
         # Avoid replicating weights across h2's, so that each sample is independent
-        us = rng.normal(size=(monte_carlo_size, len(h2_values), 1, n_samples))
-        dotproducts = sum((us**2) * weights[newaxis, :, :, :], 3)     
+        us = rng.normal(size=(monte_carlo_size, len(h2_values), n_samples))
+        dotproducts = sign_calculator.get_derivative_signs(us)
         
         # Size: monte_carlo_size X N
         hit_zero = (dotproducts[:, :, 0] <= 0)
