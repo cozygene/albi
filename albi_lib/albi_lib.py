@@ -15,8 +15,7 @@ class DerivativeSignCalculator(object):
         raise NotImplementedError("Should be overrided")
 
 class OnlyEigenvectorsDerivativeSignCalculator(DerivativeSignCalculator):
-    def __init__(self, h2_values, H2_values, kinship_eigenvalues, 
-                       eigenvectors_as_X=[-1], REML=True):
+    def __init__(self, h2_values, H2_values, kinship_eigenvalues, eigenvectors_as_X=[-1], REML=True):
         """
         Calculates the weights in the expression of the derivative of the likelihood, in the case that
         the fixed effects X are eigenvectors of the kinship matrix. Each weight is parametrized by 
@@ -84,6 +83,90 @@ def weights_zero_derivative(h2_values, H2_values, kinship_eigenvalues,
                             eigenvectors_as_X=[-1], REML=True):
     return OnlyEigenvectorsDerivativeSignCalculator(h2_values, H2_values, kinship_eigenvalues, eigenvectors_as_X=[-1], REML=True).weights
     
+
+class GeneralDerivativeSignCalculator(DerivativeSignCalculator):
+    def __init__(self, h2_values, H2_values, kinship_eigenvalues, kinship_eigenvectors, covariates, REML=True):
+        """
+        Calculate quantities to be used later when calculating derivative signs.
+
+        Arguments:
+            h2_values - a vector of size N, of all possible values of h^2
+            H2_values - a vector of size M, of a grid of possible values of H^2
+            kinship_eigenvalues - A vector of size K of the eigenvalues of the kinship matrix, in decreasing order.
+            kinship_eigenvectors - A matrix of size K x K whose columns are the eigenvectors of the kinship matrix, corresponding to the given eigenvalues.
+            covariates - a matrix of size K x P, of P covariates to be used.
+            REML - True is REML, False if ML.
+        """
+        n_samples = len(kinship_eigenvalues)
+        n_intervals = len(H2_values)-1
+        n_covariates = shape(covariates)[1]
+
+        self.h2_values = array(h2_values)
+        self.H2_values = array(H2_values)
+        
+        # Make sure the eigenvalues are in decreasing order and nonzero
+        kinship_eigenvalues = maximum(kinship_eigenvalues, 1e-10)
+        reverse_sorted_indices = argsort(kinship_eigenvalues)[::-1]
+        self.kinship_eigenvalues = array(kinship_eigenvalues)[reverse_sorted_indices]
+        self.kinship_eigenvectors = array(kinship_eigenvectors)[:, reverse_sorted_indices]
+
+        rotated_X = dot(self.kinship_eigenvectors.T, covariates)
+
+        # Size: M X K X P
+        self.X_XtdXi_matrices = zeros((len(self.H2_values), n_samples, n_covariates))
+        for iH, H2 in enumerate(self.H2_values): 
+            self.X_XtdXi_matrices[iH, :, :] = dot(rotated_X, linalg.inv(dot(rotated_X.T * (1.0/(H2*(self.kinship_eigenvalues-1) + 1)), rotated_X)))
+
+        # Size: M X P X K
+        self.Xt_Dv_matrices = zeros((len(self.H2_values), n_covariates, n_samples))
+        for iH, H2 in enumerate(self.H2_values): 
+            self.Xt_Dv_matrices[iH, :, :] = rotated_X.T * (1.0/(H2*(self.kinship_eigenvalues-1) + 1))
+
+        first_logdets = zeros(len(self.H2_values))
+        second_logdets = zeros(len(self.H2_values))
+        self.B_multipliers = zeros(len(self.H2_values))
+        for iH, H2 in enumerate(self.H2_values): 
+            first_logdet = sum((self.kinship_eigenvalues-1) / (H2*(self.kinship_eigenvalues-1) + 1))
+            second_logdet = sum(linalg.inv(dot(rotated_X.T * (1.0/(H2*(self.kinship_eigenvalues-1) + 1)), rotated_X))  *
+                                     dot(rotated_X.T * (-(self.kinship_eigenvalues-1)/((H2*(self.kinship_eigenvalues-1) + 1)**2)), rotated_X))
+            if REML:
+                self.B_multipliers[iH] = (first_logdet + second_logdet) * (1.0/(n_samples - n_covariates))
+            else:
+                self.B_multipliers[iH] = (first_logdet) * (1.0/n_samples)        
+
+    def get_derivative_signs(self, us):
+        """
+        Get the signs of the derivative for the supplied vectors.
+
+        Arguments:
+            us - a matrix of size N X K, of N vectors, one per value of h2
+
+        Returns:
+            A matrix of size N X M of the derivative signs of each vector at the M given H2 points
+        """
+        n_samples = len(self.kinship_eigenvalues)
+
+        assert shape(us)[0] == len(self.h2_values)
+        assert shape(us)[1] == n_samples
+
+        vs = ((self.h2_values[:, newaxis] * (self.kinship_eigenvalues[newaxis, :] - 1) + 1)**0.5) * us
+
+        # Size N X M X P
+        w1s = tensordot(vs, self.Xt_Dv_matrices, axes=([1, 2]))
+
+        # Size N X M X K
+        w2s = zeros([len(self.h2_values), len(self.H2_values), n_samples])
+        for ih, h2 in enumerate(self.h2_values):
+            w2s[ih, :, :] = sum(self.X_XtdXi_matrices * w1s[ih, :, newaxis, :], 2)
+
+        # Size N X M X K
+        wss = vs[:, newaxis, :] - w2s
+        Ass = sum(((self.kinship_eigenvalues[newaxis, newaxis, :] - 1)) / ((self.H2_values[newaxis, :, newaxis] * (self.kinship_eigenvalues[newaxis, newaxis, :] - 1) + 1)**2) * (wss**2), 2)
+        Bss = sum(1.0/(self.H2_values[newaxis, :, newaxis] * (self.kinship_eigenvalues[newaxis, newaxis, :] - 1) + 1) * (wss**2), 2)
+
+        dotproducts = Ass - self.B_multipliers[newaxis, :] * Bss
+
+        return sign(dotproducts)
 
 def estimate_distributions_eigenvectors(h2_values, H2_values, kinship_eigenvalues, 
                                         n_random_samples=100, eigenvectors_as_X=[-1], REML=True, seed=0):
@@ -178,61 +261,18 @@ def estimate_distributions_general(h2_values, H2_values, kinship_eigenvalues, ki
 
     h2_values = array(h2_values)
     H2_values = array(H2_values)
-    
-    # Make sure the eigenvalues are in decreasing order and nonzero
-    kinship_eigenvalues = maximum(kinship_eigenvalues, 1e-10)
-    reverse_sorted_indices = argsort(kinship_eigenvalues)[::-1]
-    kinship_eigenvalues = array(kinship_eigenvalues)[reverse_sorted_indices]
-    kinship_eigenvectors = array(kinship_eigenvectors)[:, reverse_sorted_indices]
-
-    rotated_X = dot(kinship_eigenvectors.T, covariates)
+   
     prob = zeros((len(h2_values), n_intervals+2))
 
     if not hasattr(n_random_samples, '__iter__'):  # assumes that n_random_samples is int
         n_random_samples = range(n_random_samples)
 
-    # Size: M X K X P
-    X_XtdXi_matrices = zeros((len(H2_values), n_samples, n_covariates))
-    for iH, H2 in enumerate(H2_values): 
-        X_XtdXi_matrices[iH, :, :] = dot(rotated_X, linalg.inv(dot(rotated_X.T * (1.0/(H2*(kinship_eigenvalues-1) + 1)), rotated_X)))
+    sign_calculator = GeneralDerivativeSignCalculator(h2_values, H2_values, kinship_eigenvalues, kinship_eigenvectors, covariates, REML=REML)
 
-    # Size: M X P X K
-    Xt_Dv_matrices = zeros((len(H2_values), n_covariates, n_samples))
-    for iH, H2 in enumerate(H2_values): 
-        Xt_Dv_matrices[iH, :, :] = rotated_X.T * (1.0/(H2*(kinship_eigenvalues-1) + 1))
-
-    first_logdets = zeros(len(H2_values))
-    second_logdets = zeros(len(H2_values))
-    B_multipliers = zeros(len(H2_values))
-    for iH, H2 in enumerate(H2_values): 
-        first_logdet = sum((kinship_eigenvalues-1) / (H2*(kinship_eigenvalues-1) + 1))
-        second_logdet = sum(linalg.inv(dot(rotated_X.T * (1.0/(H2*(kinship_eigenvalues-1) + 1)), rotated_X))  *
-                                 dot(rotated_X.T * (-(kinship_eigenvalues-1)/((H2*(kinship_eigenvalues-1) + 1)**2)), rotated_X))
-        if REML:
-            B_multipliers[iH] = (first_logdet + second_logdet) * (1.0/(n_samples - n_covariates))
-        else:
-            B_multipliers[iH] = (first_logdet) * (1.0/n_samples)
-        
     # Main loop
     for i in n_random_samples:        
-        # Size N X K
         us = rng.normal(size=(len(h2_values), n_samples))         
-        vs = ((h2_values[:, newaxis] * (kinship_eigenvalues[newaxis, :] - 1) + 1)**0.5) * us
-
-        # Size N X M X P
-        w1s = tensordot(vs, Xt_Dv_matrices, axes=([1, 2]))
-
-        # Size N X M X K
-        w2s = zeros([len(h2_values), len(H2_values), n_samples])
-        for ih, h2 in enumerate(h2_values):
-            w2s[ih, :, :] = sum(X_XtdXi_matrices * w1s[ih, :, newaxis, :], 2)
-
-        # Size N X M X K
-        wss = vs[:, newaxis, :] - w2s
-        Ass = sum(((kinship_eigenvalues[newaxis, newaxis, :] - 1)) / ((H2_values[newaxis, :, newaxis] * (kinship_eigenvalues[newaxis, newaxis, :] - 1) + 1)**2) * (wss**2), 2)
-        Bss = sum(1.0/(H2_values[newaxis, :, newaxis] * (kinship_eigenvalues[newaxis, newaxis, :] - 1) + 1) * (wss**2), 2)
-
-        dotproducts = Ass - B_multipliers[newaxis, :] * Bss
+        dotproducts = sign_calculator.get_derivative_signs(us)
 
         hit_zero = (dotproducts[:, 0] <= 0)
         hit_one = (dotproducts[:, -1] >= 0)
