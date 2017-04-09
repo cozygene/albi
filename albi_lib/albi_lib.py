@@ -48,17 +48,21 @@ class OnlyEigenvectorsDerivativeSignCalculator(DerivativeSignCalculator):
         # Calculate weights
         projection = ones((1, 1, n_samples))
         projection[0, 0, eigenvectors_as_X] = 0
-        
+        projection = projection.astype(bool)
+
         ds = (kinship_eigenvalues - 1) / (H2_values * (kinship_eigenvalues - 1) + 1)
         denom = n_samples
 
         if REML:
-            ds = projection * (kinship_eigenvalues - 1) / (H2_values * (kinship_eigenvalues-1) + 1)
+            ds = projection * (kinship_eigenvalues - 1) / (H2_values * (kinship_eigenvalues-1) + 1)                
             denom = n_samples - len(eigenvectors_as_X)
+
 
         self.weights = projection * (h2_values * (kinship_eigenvalues - 1) + 1) / \
                                     (H2_values * (kinship_eigenvalues - 1) + 1) \
-                                     * (ds - sum(ds, 2)[:, :, newaxis] / denom)
+                                     * (ds - nansum(ds, 2)[:, :, newaxis] / denom)
+
+        self.weights = nan_to_num(self.weights)
 
     def get_derivative_signs(self, us):
         """
@@ -126,8 +130,8 @@ class GeneralDerivativeSignCalculator(DerivativeSignCalculator):
         second_logdets = zeros(len(self.H2_values))
         self.B_multipliers = zeros(len(self.H2_values))
         for iH, H2 in enumerate(self.H2_values): 
-            first_logdet = sum((self.kinship_eigenvalues-1) / (H2*(self.kinship_eigenvalues-1) + 1))
-            second_logdet = sum(linalg.inv(dot(rotated_X.T * (1.0/(H2*(self.kinship_eigenvalues-1) + 1)), rotated_X))  *
+            first_logdet = nansum((self.kinship_eigenvalues-1) / (H2*(self.kinship_eigenvalues-1) + 1))
+            second_logdet = nansum(linalg.inv(dot(rotated_X.T * (1.0/(H2*(self.kinship_eigenvalues-1) + 1)), rotated_X))  *
                                      dot(rotated_X.T * (-(self.kinship_eigenvalues-1)/((H2*(self.kinship_eigenvalues-1) + 1)**2)), rotated_X))
             if REML:
                 self.B_multipliers[iH] = (first_logdet + second_logdet) * (1.0/(n_samples - n_covariates))
