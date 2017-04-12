@@ -3,7 +3,7 @@
 import os
 import sys
 import argparse
-from numpy import arange, loadtxt, savetxt, hstack, vstack, newaxis, concatenate, array
+from numpy import arange, loadtxt, savetxt, hstack, vstack, newaxis, concatenate, array, ones, shape
 import fiesta_lib
 import progress_bar
 
@@ -37,6 +37,7 @@ if __name__ == '__main__':
   parser.add_argument('-u', '--use_eigenvectors_as_covariates', type=str, default='-1', help="A comma-separated list detailing which eigenvectors should be used as covariates.")
   parser.add_argument('-v', '--kinship_eigenvectors', type=str, help="A file containing the eigenvectors of the kinship matrix, one eigenvector per column, in text format.")
   parser.add_argument('-x', '--covariates', type=str, help="A file containing the covariates, one covariate per column, in text format.")
+  parser.add_argument('-i', '--add_intercept', type=eval, default=True, help="If using covariates, add an intercept covariate (or only use an intercept covariate, if not covariates file supplied.")
   parser.add_argument('-p', '--precision', type=int, default=100, help="The number of grid points of the true heritability values, for which the estimator distributions are estimated. Effectively, this is the precision at which the CIs will be given (e.g., 100 grid points = 0.01 precision).")
   parser.add_argument('-n', '--iterations', type=int, default=1000, help="Number of iterations to use for estimation.")
   
@@ -105,36 +106,42 @@ if __name__ == '__main__':
       print("If using eigenvectors, covariates file must be supplied."); sys.exit(2)
   if args.covariates and not args.kinship_eigenvectors:
       print("If using covariates, eigenvectors file must be supplied."); sys.exit(2)
-  if args.covariates and args.kinship_eigenvectors:
+  if (args.add_intercept or args.covariates) and args.kinship_eigenvectors:
     # General case
     try:
       kinship_eigenvectors = loadtxt(args.kinship_eigenvectors)
     except:
       print("Failed reading eigenvectors file."); raise
     
-    try:
-      covariates = loadtxt(args.covariates)
-    except:
-      print("Failed reading covariates file."); raise
+    if args.covariates is not None: 
+        try:
+          covariates = loadtxt(args.covariates)
+        except:
+          print("Failed reading covariates file."); raise
+        print args.add_intercept
+        if args.add_intercept:
+            covariates = hstack([ones((len(kinship_eigenvalues), 1)), covariates])
+    else:
+        covariates = ones((len(args.kinship_eigenvalues), 1))
   
-    print("Building heritability CIs...")
-   
-    # print("Estimating distributions...")        
-    # distributions = albi_lib.estimate_distributions_general(h2_values = h2_values, 
-    #                                                         H2_values = H2_values, 
-    #                                                         kinship_eigenvalues = kinship_eigenvalues,
-    #                                                         kinship_eigenvectors = kinship_eigenvectors,
-    #                                                         covariates = covariates,
-    #                                                         n_random_samples = progress_bar.ProgressBarIter(args.samples))
+    print("Building heritability CIs...")   
+    cis = fiesta_lib.calculate_cis_general(h_hat_values = estimates, 
+                                           kinship_eigenvalues = kinship_eigenvalues,                                          
+                                           kinship_eigenvectors = kinship_eigenvectors,
+                                           covariates = covariates,
+                                           iterations = args.iterations,
+                                           alpha=1-args.confidence, 
+                                           tau=0.4, 
+                                           use_convergence_criterion=False)
 
   if not args.covariates and not args.kinship_eigenvectors:
     # The simpler case
     
     print("Building heritability CIs...")
-    cis = fiesta_lib.calculate_cis_eigenvectors(kinship_eigenvalues = kinship_eigenvalues, 
-                                                eigenvectors_as_X = use_eigenvectors_as_covariates, 
-                                                h_hat_values = estimates, 
-                                                iterations = args.iterations, #progress_bar.ProgressBarIter(args.samples), 
+    cis = fiesta_lib.calculate_cis_eigenvectors(h_hat_values = estimates, 
+                                                kinship_eigenvalues = kinship_eigenvalues, 
+                                                eigenvectors_as_X = use_eigenvectors_as_covariates,                                                 
+                                                iterations = args.iterations,
                                                 alpha=1-args.confidence, 
                                                 tau=0.4, 
                                                 use_convergence_criterion=False)
