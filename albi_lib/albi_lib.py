@@ -82,6 +82,7 @@ class OnlyEigenvectorsDerivativeSignCalculator(DerivativeSignCalculator):
 
         return sign(dotproducts)
 
+
 # Retain for backward compatibility
 def weights_zero_derivative(h2_values, H2_values, kinship_eigenvalues, 
                             eigenvectors_as_X=[-1], REML=True):

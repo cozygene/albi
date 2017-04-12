@@ -3,10 +3,11 @@ from numpy import *
 from scipy.stats import norm
 import scipy
 import sys
+import functools
 
 import albi_lib
 
-def binary_robbins_monro_ci(estimated_heritability, eigen_values, eigenvectors_as_X, alpha, start, tau, iterations, use_convergence_criterion=False):
+def binary_robbins_monro_general(function, C, alpha, start, tau, iterations, use_convergence_criterion=False):
     current_endpoint = start
 
     tau_1 = tau
@@ -22,26 +23,19 @@ def binary_robbins_monro_ci(estimated_heritability, eigen_values, eigenvectors_a
     k = (sqrt(2*pi)*2)/(norm_alpha*exp((-norm_alpha**2)/2))    
     
     jumps_sign = []
-    cs = []
-    mtags = []
-    ys = []
     
     for i in range(1, iterations):
         if (use_convergence_criterion and i > 500):
             positive_jumps = sum(jumps_sign[-100:])
             if positive_jumps < 90 and positive_jumps > 10:
                 return points[-1]
-
             
-        weights = albi_lib.weights_zero_derivative([current_endpoint], [estimated_heritability], eigen_values, eigenvectors_as_X=eigenvectors_as_X)[0,0]
-        derivative_at_estimate = dot(weights, scipy.randn(len(eigen_values))**2) 
+        y = function(current_endpoint)
 
         t = norm_alpha/sqrt(1+v)
         b = norm.cdf(t)
         c = (v/sqrt(1+v))*scipy.stats.norm.pdf(t)
 
-        y = derivative_at_estimate > 0
-        
         jumps_sign.append(y)
         
         v -= c**2/(b*(1-b))
@@ -50,95 +44,45 @@ def binary_robbins_monro_ci(estimated_heritability, eigen_values, eigenvectors_a
         current_endpoint = max(0, current_endpoint)
         current_endpoint = min(current_endpoint, 1)
         
-        mtag = abs(k*(current_endpoint - estimated_heritability))
+        mtag = abs(k*(current_endpoint - C))
         if mtag == 0:
             mtag = 1        
         
         beta = 1/(mtag*const)
 
-        cs.append(c)
-        mtags.append(mtag)
-        ys.append(derivative_at_estimate)
-    
-        points.append(current_endpoint)
-        
-    return points[-1]#, cs, mtags, ys#[-1]
-
-def binary_robbins_monro_boundary_lower(eigen_values, eigenvectors_as_X, alpha, start, tau):
-    current_endpoint = start
-
-    tau_1 = tau
-    c = 1
-    beta = 1/(c*norm.pdf(norm.ppf(alpha)))
-
-    v = (beta**2)*(tau_1**2)
-    
-    points = []
-    const = norm.pdf(norm.ppf(alpha))
-    norm_alpha = norm.ppf(alpha)
-    
-    for i in range(1, 3000):
-        weights = albi_lib.weights_zero_derivative([0], [current_endpoint], eigen_values, eigenvectors_as_X=eigenvectors_as_X)[0,0]
-        derivative_at_estimate = dot(weights, scipy.randn(len(eigen_values))**2) 
-        
-        t = norm_alpha/sqrt(1+v)
-        b = norm.cdf(t)
-        c = (v/sqrt(1+v))*scipy.stats.norm.pdf(t)
-
-        y = derivative_at_estimate < 0
-
-        v -= c**2/(b*(1-b))
-        
-        current_endpoint -= c*(y-b)/(beta*b*(1-b))
-
-        current_endpoint = max(0, current_endpoint)
-        current_endpoint = min(current_endpoint, 1)
-        
-        c = max(11.8*abs(current_endpoint),0.1)
-        beta = 1/(c*const)
-    
         points.append(current_endpoint)
         
     return points[-1]
 
+def eigenvector_derivative(h2, H2, eigen_values, eigenvectors_as_X):
+    calc = albi_lib.OnlyEigenvectorsDerivativeSignCalculator(h2_values=[h2], 
+                                                             H2_values=[H2], 
+                                                             kinship_eigenvalues=eigen_values, 
+                                                             eigenvectors_as_X=eigenvectors_as_X, 
+                                                             REML=True)
 
-def binary_robbins_monro_boundary_upper(eigen_values, eigenvectors_as_X, alpha, start, tau):
-    current_endpoint = start
+    return calc.get_derivative_signs(scipy.randn(1, 1, len(eigen_values)))[0, 0, 0]
 
-    tau_1 = tau
-    c = 1
-    beta = 1/(c*norm.pdf(norm.ppf(alpha)))
+def binary_robbins_monro_ci(estimated_heritability, eigen_values, eigenvectors_as_X, alpha, start, tau, iterations, use_convergence_criterion=False):
+    def invert_quantile(x):
+        return eigenvector_derivative(x, estimated_heritability, eigen_values, eigenvectors_as_X) > 0
 
-    v = (beta**2)*(tau_1**2)
-    
-    points = []
-    const = norm.pdf(norm.ppf(alpha))
-    norm_alpha = norm.ppf(alpha)
-    
-    for i in range(1, 3000):
-        weights = albi_lib.weights_zero_derivative([1],[current_endpoint], eigen_values, eigenvectors_as_X=eigenvectors_as_X)[0,0]
-        derivative_at_estimate = dot(weights, scipy.randn(len(eigen_values))**2) 
-        
-        t = norm_alpha/sqrt(1+v)
-        b = norm.cdf(t)
-        c = (v/sqrt(1+v))*scipy.stats.norm.pdf(t)
+    return binary_robbins_monro_general(invert_quantile, estimated_heritability, alpha, start, tau, iterations, use_convergence_criterion=False)    
 
-        y = derivative_at_estimate < 0
+def binary_robbins_monro_boundary_lower(eigen_values, eigenvectors_as_X, alpha, start, tau, iterations, use_convergence_criterion=False):
+    def invert_cdf_0(x):
+        return eigenvector_derivative(0, x, eigen_values, eigenvectors_as_X) < 0
 
-        v -= c**2/(b*(1-b))
-        
-        current_endpoint -= c*(y-b)/(beta*b*(1-b))
+    return binary_robbins_monro_general(invert_cdf_0, 0, alpha, start, tau, iterations, use_convergence_criterion=False)
 
-        current_endpoint = max(0, current_endpoint)
-        current_endpoint = min(current_endpoint, 1)
-        
-        c = max(11.8*abs(1-current_endpoint),0.1)
-        beta = 1/(c*const)
-    
-        points.append(current_endpoint)
-        
-    return points[-1]
 
+def binary_robbins_monro_boundary_upper(eigen_values, eigenvectors_as_X, alpha, start, tau, iterations, use_convergence_criterion=False):
+    def invert_cdf_1(x):
+        return eigenvector_derivative(1, x, eigen_values, eigenvectors_as_X) < 0
+
+    return binary_robbins_monro_general(invert_cdf_1, 1, alpha, start, tau, iterations, use_convergence_criterion=False)
+
+ 
 def get_upper_endpoint(eigen_values, eigenvectors_as_X, alpha, tau, h_hat, s, t, s_tag, t_tag, s_tagaim, t_tagaim, iterations, use_convergence_criterion=False):
     start = min(h_hat*1.5, 1)
 
@@ -249,8 +193,8 @@ def calculate_cis_eigenvectors(kinship_eigenvalues, eigenvectors_as_X, h_hat_val
     s = binary_robbins_monro_ci(0, kinship_eigenvalues, eigenvectors_as_X, 1-alpha/2, start=0.3, tau=tau, iterations=iterations, use_convergence_criterion=use_convergence_criterion)
     t = binary_robbins_monro_ci(1, kinship_eigenvalues, eigenvectors_as_X, alpha/2, start=0.7, tau=tau, iterations=iterations, use_convergence_criterion=use_convergence_criterion)
 
-    s_tag = binary_robbins_monro_boundary_lower(kinship_eigenvalues, eigenvectors_as_X, 1-alpha, start=0.3, tau=tau)
-    t_tag = binary_robbins_monro_boundary_upper(kinship_eigenvalues, eigenvectors_as_X, alpha, start=0.7, tau=tau)
+    s_tag = binary_robbins_monro_boundary_lower(kinship_eigenvalues, eigenvectors_as_X, 1-alpha, start=0.3, tau=tau, iterations=iterations, use_convergence_criterion=use_convergence_criterion)
+    t_tag = binary_robbins_monro_boundary_upper(kinship_eigenvalues, eigenvectors_as_X, alpha, start=0.7, tau=tau, iterations=iterations, use_convergence_criterion=use_convergence_criterion)
 
     if (s > t):
         s_tagaim = binary_robbins_monro_ci(0, kinship_eigenvalues, eigenvectors_as_X, 1-alpha, start=0.3, tau=tau, iterations=iterations, use_convergence_criterion=use_convergence_criterion)
