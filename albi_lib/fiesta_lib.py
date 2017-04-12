@@ -6,6 +6,7 @@ import sys
 import functools
 
 import albi_lib
+import progress_bar
 
 def binary_robbins_monro_general(function, C, alpha, start, tau, iterations, use_convergence_criterion=False):
     current_endpoint = start
@@ -205,7 +206,14 @@ def calculate_cis_eigenvectors(kinship_eigenvalues, eigenvectors_as_X, h_hat_val
 
     print s, t, s_tag, t_tag, s_tagaim, t_tagaim
 
-    upper_endpoints = [get_upper_endpoint(kinship_eigenvalues, eigenvectors_as_X, alpha, tau, h_hat, s, t, s_tag, t_tag, s_tagaim, t_tagaim, iterations, use_convergence_criterion) for h_hat in h_hat_values]
-    lower_endpoints = [get_lower_endpoint(kinship_eigenvalues, eigenvectors_as_X, alpha, tau, h_hat, s, t, s_tag, t_tag, s_tagaim, t_tagaim, iterations, use_convergence_criterion) for h_hat in h_hat_values]
+    lower_endpoints = []
+    upper_endpoints = []
+    
+    n = 0
+    for i in progress_bar.ProgressBarIter(len(h_hat_values)):
+        h_hat = h_hat_values[n]        
+        n += 1
+        upper_endpoints.append(get_upper_endpoint(kinship_eigenvalues, eigenvectors_as_X, alpha, tau, h_hat, s, t, s_tag, t_tag, s_tagaim, t_tagaim, iterations, use_convergence_criterion))
+        lower_endpoints.append(get_lower_endpoint(kinship_eigenvalues, eigenvectors_as_X, alpha, tau, h_hat, s, t, s_tag, t_tag, s_tagaim, t_tagaim, iterations, use_convergence_criterion))
 
     return array([lower_endpoints, upper_endpoints]).T
