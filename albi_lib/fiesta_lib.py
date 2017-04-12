@@ -208,8 +208,6 @@ def calculate_cis_internal(h_hat_values, derivative_function, alpha):
         s_tagaim = None
         t_tagaim = None
 
-    print s, t, s_tag, t_tag, s_tagaim, t_tagaim
-
     lower_endpoints = []
     upper_endpoints = []
 

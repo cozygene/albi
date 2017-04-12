@@ -3,7 +3,7 @@
 import os
 import sys
 import argparse
-from numpy import arange, loadtxt, savetxt, hstack, vstack, newaxis, concatenate, array, ones, shape
+from numpy import arange, loadtxt, savetxt, hstack, vstack, newaxis, concatenate, array, ones, mean
 import fiesta_lib
 import progress_bar
 
@@ -118,9 +118,9 @@ if __name__ == '__main__':
           covariates = loadtxt(args.covariates)
         except:
           print("Failed reading covariates file."); raise
-        print args.add_intercept
         if args.add_intercept:
-            covariates = hstack([ones((len(kinship_eigenvalues), 1)), covariates])
+            if not any(mean(covariates == 1, axis=0) == 1):
+                covariates = hstack([ones((len(kinship_eigenvalues), 1)), covariates])
     else:
         covariates = ones((len(args.kinship_eigenvalues), 1))
   
