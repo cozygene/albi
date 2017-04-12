@@ -8,14 +8,15 @@ import functools
 import albi_lib
 import progress_bar
 
-def binary_robbins_monro_general(function, C, alpha, start, tau, iterations, use_convergence_criterion=False):
+def binary_robbins_monro_general(function, C, alpha, start):
+    global rm_tau, rm_iterations, rm_use_convergence_criterion
+
     current_endpoint = start
 
-    tau_1 = tau
     mtag = 1
     beta = 1/(mtag*norm.pdf(norm.ppf(alpha)))
 
-    v = (beta**2)*(tau_1**2)
+    v = (beta**2)*(rm_tau**2)
     
     points = []
     const = norm.pdf(norm.ppf(alpha))
@@ -25,8 +26,8 @@ def binary_robbins_monro_general(function, C, alpha, start, tau, iterations, use
     
     jumps_sign = []
     
-    for i in range(1, iterations):
-        if (use_convergence_criterion and i > 500):
+    for i in range(1, rm_iterations):
+        if (rm_use_convergence_criterion and i > 500):
             positive_jumps = sum(jumps_sign[-100:])
             if positive_jumps < 90 and positive_jumps > 10:
                 return points[-1]
@@ -55,36 +56,47 @@ def binary_robbins_monro_general(function, C, alpha, start, tau, iterations, use
         
     return points[-1]
 
-def eigenvector_derivative(h2, H2, eigen_values, eigenvectors_as_X):
+def eigenvector_derivative(h2, H2, kinship_eigenvalues, eigenvectors_as_X):
     calc = albi_lib.OnlyEigenvectorsDerivativeSignCalculator(h2_values=[h2], 
                                                              H2_values=[H2], 
-                                                             kinship_eigenvalues=eigen_values, 
+                                                             kinship_eigenvalues=kinship_eigenvalues, 
                                                              eigenvectors_as_X=eigenvectors_as_X, 
                                                              REML=True)
 
-    return calc.get_derivative_signs(scipy.randn(1, 1, len(eigen_values)))[0, 0, 0]
+    return calc.get_derivative_signs(scipy.randn(1, 1, len(kinship_eigenvalues)))[0, 0, 0]
 
-def binary_robbins_monro_ci(derivative_function, estimated_heritability, alpha, start, tau, iterations, use_convergence_criterion=False):
+def general_derivative(h2, H2, kinship_eigenvalues, kinship_eigenvectors, covariates):
+    calc = albi_lib.GeneralDerivativeSignCalculator(h2_values=[h2], 
+                                                    H2_values=[H2], 
+                                                    kinship_eigenvalues=kinship_eigenvalues,
+                                                    kinship_eigenvectors=kinship_eigenvectors, 
+                                                    covariates=covariates,
+                                                    REML=True)
+
+    return calc.get_derivative_signs(scipy.randn(1, len(kinship_eigenvalues)))[0, 0]
+
+
+def binary_robbins_monro_ci(derivative_function, estimated_heritability, alpha, start):
     def invert_quantile(x):
         return derivative_function(x, estimated_heritability) > 0
 
-    return binary_robbins_monro_general(invert_quantile, estimated_heritability, alpha, start, tau, iterations, use_convergence_criterion=False)    
+    return binary_robbins_monro_general(invert_quantile, estimated_heritability, alpha, start)    
 
-def binary_robbins_monro_boundary_lower(derivative_function, alpha, start, tau, iterations, use_convergence_criterion=False):
+def binary_robbins_monro_boundary_lower(derivative_function, alpha, start):
     def invert_cdf_0(x):
         return derivative_function(0, x) < 0
 
-    return binary_robbins_monro_general(invert_cdf_0, 0, alpha, start, tau, iterations, use_convergence_criterion=False)
+    return binary_robbins_monro_general(invert_cdf_0, 0, alpha, start)
 
 
-def binary_robbins_monro_boundary_upper(derivative_function, alpha, start, tau, iterations, use_convergence_criterion=False):
+def binary_robbins_monro_boundary_upper(derivative_function, alpha, start):
     def invert_cdf_1(x):
         return derivative_function(1, x) < 0
 
-    return binary_robbins_monro_general(invert_cdf_1, 1, alpha, start, tau, iterations, use_convergence_criterion=False)
+    return binary_robbins_monro_general(invert_cdf_1, 1, alpha, start)
 
  
-def get_upper_endpoint(derivative_function, alpha, tau, h_hat, s, t, s_tag, t_tag, s_tagaim, t_tagaim, iterations, use_convergence_criterion=False):
+def get_upper_endpoint(derivative_function, alpha, h_hat, s, t, s_tag, t_tag, s_tagaim, t_tagaim):
     start = min(h_hat*1.5, 1)
 
     # Case 1: s < t
@@ -94,14 +106,12 @@ def get_upper_endpoint(derivative_function, alpha, tau, h_hat, s, t, s_tag, t_ta
         if h_hat == 0:
             return s
         
-        upper_endpoint_half_alpha = binary_robbins_monro_ci(derivative_function, h_hat, 1-alpha/2, start=start, tau=tau, iterations=iterations,
-                                                  use_convergence_criterion=use_convergence_criterion)
+        upper_endpoint_half_alpha = binary_robbins_monro_ci(derivative_function, h_hat, 1-alpha/2, start=start)
 
         if t > upper_endpoint_half_alpha:
             return upper_endpoint_half_alpha
 
-        upper_endpoint_alpha = binary_robbins_monro_ci(derivative_function, h_hat, 1-alpha, start=start, tau=tau, iterations=iterations,
-                                                  use_convergence_criterion=use_convergence_criterion)
+        upper_endpoint_alpha = binary_robbins_monro_ci(derivative_function, h_hat, 1-alpha, start=start)
             
         if t < upper_endpoint_alpha:
             return upper_endpoint_alpha
@@ -115,8 +125,7 @@ def get_upper_endpoint(derivative_function, alpha, tau, h_hat, s, t, s_tag, t_ta
         if h_hat == 1 or h_hat > t_tag:
             return 1
 
-        upper_endpoint_alpha = binary_robbins_monro_ci(derivative_function, h_hat, 1-alpha, start=start, tau=tau, iterations=iterations,
-                                                  use_convergence_criterion=use_convergence_criterion)
+        upper_endpoint_alpha = binary_robbins_monro_ci(derivative_function, h_hat, 1-alpha, start=start)
 
         if upper_endpoint_alpha > delta:
             return upper_endpoint_alpha
@@ -128,13 +137,12 @@ def get_upper_endpoint(derivative_function, alpha, tau, h_hat, s, t, s_tag, t_ta
         if h_hat == 1 or h_hat > t_tag:
             return 1
 
-        upper_endpoint_alpha = binary_robbins_monro_ci(derivative_function, h_hat, 1-alpha, start=start, tau=tau, iterations=iterations,
-                                                  use_convergence_criterion=use_convergence_criterion)
+        upper_endpoint_alpha = binary_robbins_monro_ci(derivative_function, h_hat, 1-alpha, start=start)
 
         return upper_endpoint_alpha
 
 
-def get_lower_endpoint(derivative_function, alpha, tau, h_hat, s, t, s_tag, t_tag, s_tagaim, t_tagaim, iterations, use_convergence_criterion=False):
+def get_lower_endpoint(derivative_function, alpha, h_hat, s, t, s_tag, t_tag, s_tagaim, t_tagaim):
     start = max(h_hat*0.7, 0)
     
     # Case 1: s < t
@@ -145,14 +153,12 @@ def get_lower_endpoint(derivative_function, alpha, tau, h_hat, s, t, s_tag, t_ta
             return t
         
         
-        lower_endpoint_half_alpha = binary_robbins_monro_ci(derivative_function, h_hat, alpha/2, start=start, tau=tau, iterations=iterations,
-                                                           use_convergence_criterion=use_convergence_criterion)
+        lower_endpoint_half_alpha = binary_robbins_monro_ci(derivative_function, h_hat, alpha/2, start=start)
             
         if s < lower_endpoint_half_alpha:
             return lower_endpoint_half_alpha
         
-        lower_endpoint_alpha = binary_robbins_monro_ci(derivative_function, h_hat, alpha, start=start, tau=tau, iterations=iterations,
-                                                      use_convergence_criterion=use_convergence_criterion)
+        lower_endpoint_alpha = binary_robbins_monro_ci(derivative_function, h_hat, alpha, start=start)
 
         if s > lower_endpoint_alpha:
             return lower_endpoint_alpha
@@ -171,8 +177,7 @@ def get_lower_endpoint(derivative_function, alpha, tau, h_hat, s, t, s_tag, t_ta
         
         start = max(h_hat*0.7, 0)
         
-        lower_endpoint_alpha = binary_robbins_monro_ci(derivative_function, h_hat, alpha, start=start, tau=tau, iterations=iterations,
-                                                      use_convergence_criterion=use_convergence_criterion)
+        lower_endpoint_alpha = binary_robbins_monro_ci(derivative_function, h_hat, alpha, start=start)
 
         if lower_endpoint_alpha <= delta:
             return lower_endpoint_alpha
@@ -184,24 +189,21 @@ def get_lower_endpoint(derivative_function, alpha, tau, h_hat, s, t, s_tag, t_ta
         if h_hat == 0 or h_hat < s_tag: 
             return 0
 
-        lower_endpoint_alpha = binary_robbins_monro_ci(derivative_function, h_hat, alpha, start=start, tau=tau, iterations=iterations,
-                                                    use_convergence_criterion=use_convergence_criterion)            
+        lower_endpoint_alpha = binary_robbins_monro_ci(derivative_function, h_hat, alpha, start=start)
         return lower_endpoint_alpha
         
 
 
-def calculate_cis_eigenvectors(kinship_eigenvalues, eigenvectors_as_X, h_hat_values, iterations, alpha, tau=0.4, use_convergence_criterion=False):
-    derivative_function = functools.partial(eigenvector_derivative, eigen_values=kinship_eigenvalues, eigenvectors_as_X=eigenvectors_as_X)
+def calculate_cis_internal(h_hat_values, derivative_function, alpha):
+    s = binary_robbins_monro_ci(derivative_function, 0, 1-alpha/2, start=0.3)
+    t = binary_robbins_monro_ci(derivative_function, 1, alpha/2, start=0.7)
 
-    s = binary_robbins_monro_ci(derivative_function, 0, 1-alpha/2, start=0.3, tau=tau, iterations=iterations, use_convergence_criterion=use_convergence_criterion)
-    t = binary_robbins_monro_ci(derivative_function, 1, alpha/2, start=0.7, tau=tau, iterations=iterations, use_convergence_criterion=use_convergence_criterion)
-
-    s_tag = binary_robbins_monro_boundary_lower(derivative_function, 1-alpha, start=0.3, tau=tau, iterations=iterations, use_convergence_criterion=use_convergence_criterion)
-    t_tag = binary_robbins_monro_boundary_upper(derivative_function, alpha, start=0.7, tau=tau, iterations=iterations, use_convergence_criterion=use_convergence_criterion)
+    s_tag = binary_robbins_monro_boundary_lower(derivative_function, 1-alpha, start=0.3)
+    t_tag = binary_robbins_monro_boundary_upper(derivative_function, alpha, start=0.7)
 
     if (s > t):
-        s_tagaim = binary_robbins_monro_ci(derivative_function, 0, 1-alpha, start=0.3, tau=tau, iterations=iterations, use_convergence_criterion=use_convergence_criterion)
-        t_tagaim = binary_robbins_monro_ci(derivative_function, 1, alpha, start=0.7, tau=tau, iterations=iterations, use_convergence_criterion=use_convergence_criterion)
+        s_tagaim = binary_robbins_monro_ci(derivative_function, 0, 1-alpha, start=0.3)
+        t_tagaim = binary_robbins_monro_ci(derivative_function, 1, alpha, start=0.7)
     else:
         s_tagaim = None
         t_tagaim = None
@@ -215,7 +217,22 @@ def calculate_cis_eigenvectors(kinship_eigenvalues, eigenvectors_as_X, h_hat_val
     for i in progress_bar.ProgressBarIter(len(h_hat_values)):
         h_hat = h_hat_values[n]        
         n += 1
-        upper_endpoints.append(get_upper_endpoint(derivative_function, alpha, tau, h_hat, s, t, s_tag, t_tag, s_tagaim, t_tagaim, iterations, use_convergence_criterion))
-        lower_endpoints.append(get_lower_endpoint(derivative_function, alpha, tau, h_hat, s, t, s_tag, t_tag, s_tagaim, t_tagaim, iterations, use_convergence_criterion))
+        upper_endpoints.append(get_upper_endpoint(derivative_function, alpha, h_hat, s, t, s_tag, t_tag, s_tagaim, t_tagaim))
+        lower_endpoints.append(get_lower_endpoint(derivative_function, alpha, h_hat, s, t, s_tag, t_tag, s_tagaim, t_tagaim))
 
     return array([lower_endpoints, upper_endpoints]).T
+
+def calculate_cis_eigenvectors(h_hat_values, kinship_eigenvalues, eigenvectors_as_X, iterations, alpha, tau=0.4, use_convergence_criterion=False):
+    global rm_tau, rm_iterations, rm_use_convergence_criterion
+    rm_tau, rm_iterations, rm_use_convergence_criterion = tau, iterations, use_convergence_criterion
+
+    derivative_function = functools.partial(eigenvector_derivative, kinship_eigenvalues=kinship_eigenvalues, eigenvectors_as_X=eigenvectors_as_X)
+    return calculate_cis_internal(h_hat_values, derivative_function, alpha)
+
+def calculate_cis_general(h_hat_values, kinship_eigenvalues, kinship_eigenvectors, covariates, iterations, alpha, tau=0.4, use_convergence_criterion=False):
+    global rm_tau, rm_iterations, rm_use_convergence_criterion
+    rm_tau, rm_iterations, rm_use_convergence_criterion = tau, iterations, use_convergence_criterion
+
+    derivative_function = functools.partial(general_derivative, kinship_eigenvalues=kinship_eigenvalues, kinship_eigenvectors=kinship_eigenvectors, covariates=covariates)
+    return calculate_cis_internal(h_hat_values, derivative_function, alpha)
+
