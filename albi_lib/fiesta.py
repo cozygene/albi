@@ -18,12 +18,14 @@ See https://github.com/cozygene/albi for full documentation about usage.
 
    python fiesta.py --kinship_eigenvalues filename 
                  [--use_eigenvectors_as_covariates <list of #>]
-                 [--precision <# of grid points>] 
-                 (--estimates_filename filename
+                 [--kinship_eigenvectors filename]
+                 [--covariates filename]
+                 [--add_intercept True/False]                 
                  (--estimates_filename filename] 
                     or
                   --estimate_grid <# of grid points>)
                  [--confidence <required confidence level>] 
+                 [--iterations <# of iterations>] 
                  [--output_filename filename]
 """
 
@@ -38,7 +40,6 @@ if __name__ == '__main__':
   parser.add_argument('-v', '--kinship_eigenvectors', type=str, help="A file containing the eigenvectors of the kinship matrix, one eigenvector per column, in text format.")
   parser.add_argument('-x', '--covariates', type=str, help="A file containing the covariates, one covariate per column, in text format.")
   parser.add_argument('-i', '--add_intercept', type=eval, default=True, help="If using covariates, add an intercept covariate (or only use an intercept covariate, if not covariates file supplied.")
-  parser.add_argument('-p', '--precision', type=int, default=100, help="The number of grid points of the true heritability values, for which the estimator distributions are estimated. Effectively, this is the precision at which the CIs will be given (e.g., 100 grid points = 0.01 precision).")
   parser.add_argument('-n', '--iterations', type=int, default=1000, help="Number of iterations to use for estimation.")
   
   group_estimates = parser.add_mutually_exclusive_group(required=False)
@@ -64,9 +65,6 @@ if __name__ == '__main__':
   except:
     print("Cannot parse --use_eigenvectors_as_covariates flag. It should be a comma-separated list of integers."); sys.exit(2)
 
-  if args.precision <= 0:
-    print("Precision should be a positive integer."); sys.exit(2)
-
   if args.iterations <= 0:
     print("Number of iterations should be a positive integer."); sys.exit(2)
   
@@ -76,10 +74,6 @@ if __name__ == '__main__':
   if not (0 <= args.confidence <= 1):
     print("Confidence is a number between 0 and 1."); sys.exit(2)
   
-
-  precision_h2 = 1.0 / args.precision
-  h2_values = arange(0, 1 + precision_h2, precision_h2)
-
   if args.kinship_eigenvalues is None:
     print("Kinship matrix eigenvalues file is required."); sys.exit(2)
 
