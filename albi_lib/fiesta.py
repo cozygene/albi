@@ -3,7 +3,7 @@
 import os
 import sys
 import argparse
-from numpy import arange, loadtxt, savetxt, hstack, vstack, newaxis, concatenate, array, ones, mean
+from numpy import arange, loadtxt, savetxt, hstack, vstack, newaxis, concatenate, array, ones, mean, isclose
 import fiesta_lib
 import progress_bar
 
@@ -36,7 +36,7 @@ if __name__ == '__main__':
   parser = FiestaArgumentParser(prog=os.path.basename(sys.argv[0]), usage=FIESTA_USAGE)
       
   parser.add_argument('-k', '--kinship_eigenvalues', type=str, help="A file containing the eigenvalues of the kinship matrix, one eigenvalue per line, in text format.") 
-  parser.add_argument('-u', '--use_eigenvectors_as_covariates', type=str, default='-1', help="A comma-separated list detailing which eigenvectors should be used as covariates.")
+  parser.add_argument('-u', '--use_eigenvectors_as_covariates', type=str, default='', help="A comma-separated list detailing which eigenvectors should be used as covariates.")
   parser.add_argument('-v', '--kinship_eigenvectors', type=str, help="A file containing the eigenvectors of the kinship matrix, one eigenvector per column, in text format.")
   parser.add_argument('-x', '--covariates', type=str, help="A file containing the covariates, one covariate per column, in text format.")
   parser.add_argument('-i', '--add_intercept', type=eval, default=True, help="If using covariates, add an intercept covariate (or only use an intercept covariate, if not covariates file supplied.")
@@ -59,11 +59,6 @@ if __name__ == '__main__':
                    args.estimates_filename]:
     if filename and not os.path.exists(filename):
       print("File %s does not exist." % filename); sys.exit(2)
-
-  try:
-    use_eigenvectors_as_covariates = list(map(int, args.use_eigenvectors_as_covariates.split(',')))
-  except:
-    print("Cannot parse --use_eigenvectors_as_covariates flag. It should be a comma-separated list of integers."); sys.exit(2)
 
   if args.iterations <= 0:
     print("Number of iterations should be a positive integer."); sys.exit(2)
@@ -95,18 +90,20 @@ if __name__ == '__main__':
     estimates = arange(0, 1 + 1.0/args.estimate_grid, 1.0/args.estimate_grid)
 
 
-  # Decide if it's the simpler case or the general case
-  if args.kinship_eigenvectors and not args.covariates:
-      print("If using eigenvectors, covariates file must be supplied."); sys.exit(2)
   if args.covariates and not args.kinship_eigenvectors:
       print("If using covariates, eigenvectors file must be supplied."); sys.exit(2)
-  if (args.add_intercept or args.covariates) and args.kinship_eigenvectors:
+
+  # Decide if it's the simpler case or the general case
+  if args.kinship_eigenvectors and (args.covariates is not None or args.add_intercept):
     # General case
     try:
       kinship_eigenvectors = loadtxt(args.kinship_eigenvectors)
     except:
       print("Failed reading eigenvectors file."); raise
-    
+
+    if args.use_eigenvectors_as_covariates != '':
+        print("If eigenvectors were given explicitly, cannot use --use_eigenvectors_as_covariates - use covariates directly."); sys.exit(2)
+
     if args.covariates is not None: 
         try:
           covariates = loadtxt(args.covariates)
@@ -116,7 +113,8 @@ if __name__ == '__main__':
             if not any(mean(covariates == 1, axis=0) == 1):
                 covariates = hstack([ones((len(kinship_eigenvalues), 1)), covariates])
     else:
-        covariates = ones((len(args.kinship_eigenvalues), 1))
+        print("Note: No covariates supplied, using a constant intercept covariate.")
+        covariates = ones((len(kinship_eigenvalues), 1))
   
     print("Building heritability CIs...")   
     cis = fiesta_lib.calculate_cis_general(h_hat_values = estimates, 
@@ -128,9 +126,22 @@ if __name__ == '__main__':
                                            tau=0.4, 
                                            use_convergence_criterion=False)
 
-  if not args.covariates and not args.kinship_eigenvectors:
+  else:
     # The simpler case
-    
+
+    # A subcase if not covariates were given at all in the general case - fall back
+    if args.kinship_eigenvectors and args.covariates is None and not args.add_intercept:
+        eigenvectors_as_X = []
+
+    elif args.use_eigenvectors_as_covariates == '':
+        eigenvectors_as_X = [-1]   # Default
+
+    else:
+        try:
+            use_eigenvectors_as_covariates = list(map(int, args.use_eigenvectors_as_covariates.split(',')))
+        except:
+            print("Cannot parse --use_eigenvectors_as_covariates flag. It should be a comma-separated list of integers."); sys.exit(2)
+  
     print("Building heritability CIs...")
     cis = fiesta_lib.calculate_cis_eigenvectors(h_hat_values = estimates, 
                                                 kinship_eigenvalues = kinship_eigenvalues, 
