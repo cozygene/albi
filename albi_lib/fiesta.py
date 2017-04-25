@@ -69,6 +69,9 @@ if __name__ == '__main__':
   
   if not (0 <= args.confidence <= 1):
     print("Confidence is a number between 0 and 1."); sys.exit(2)
+
+  if args.confidence < 0.5:
+    print("Warning: Confidence is small; usually values as 0.95 are used. Make sure this is on purpose.")
   
   if args.kinship_eigenvalues is None:
     print("Kinship matrix eigenvalues file is required."); sys.exit(2)
