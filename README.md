@@ -129,7 +129,7 @@ The following command estimates the distributions, and saves the results to a fi
    python fiesta.py --kinship_eigenvalues filename
                   --kinship_eigenvectors filename
                  [--covariates filename]
-                 [--add_intercept True/False]
+                 [--no_intercept]
                  (--estimates_filename filename
                     or
                   --estimate_grid <# of grid points>)
@@ -144,7 +144,7 @@ The flags are as follows:
 * `kinship_eigenvalues` (`-k`) - A file containing the eigenvalues of the kinship matrix, one eigenvalue per line, in text format. This could be created, for example, with GCTA's `--pca` flag.
 * `kinship_eigenvectors`(`-v`) - A file containing the eigenvectors of the kinship matrix, one eigenvector per column, in text format. This could be created, for example, with GCTA's `--pca` flag.
 * `covariates` (`-x`) - A file containing the covariates, one covariate per column, in text format. 
-* `add_intercept` (`-i`) - Boolean flag (True/False) - whether to use a constant 1 (intercept) covariate. Can be used without an additional covariates file. Default is True.
+* `no_intercept` (`-i`) - Add to explicitly *not* use a constant 1 (intercept) covariate. Can be used without an additional covariates file. Is not enabled by default, i.e. an intercept is added.
 * `estimates_filename` (`-f`) - A filename containing a list of heritability estimates (one per line) in text format. A CI will be calculated for each one. 
 * `estimate_grid` (`-g`) - Alternatively, one can ask ALBI to calculate CIs for a grid of heritability estimates (e.g., a grid of 100, will calculate CIs for 0, 0.01, ..., 0.99, 1). Default is 10.
 * `confidence` (`-c`) - The required confidence level for the CIs. Default is 0.95 (95% CIs).
