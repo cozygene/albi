@@ -17,6 +17,7 @@ The following reads the eigenvalues from a file, calculates 95% CIs over a grid 
 ```
    python fiesta.py --kinship_eigenvalues ./data/eigenvalues.txt
 ```
+**Note**: Under Windows, replace ```fiesta.py``` with ```albi_lib/fiesta.py```.
 
 The default output is the CIs for heritability estimates of 0, 0.1, ..., 0.9, 1:
 
@@ -54,7 +55,7 @@ You can simply download the code and run it as a standard program:
    python fiesta.py [flags]
 ```
 
-**Note**: The [NumPy](http://www.numpy.org/) package is required for FIESTA.
+**Note**: The [NumPy](http://www.numpy.org/) and SciPy packages are required for FIESTA.
 
 ### 2. Install using `pip` or `setuptools`
 
@@ -102,6 +103,7 @@ The following command builds CIs and saves them to a file:
                  [--iterations <# of iterations>] 
                  [--output_filename filename]
 ```
+**Note**: Under Windows, replace ```fiesta.py``` with ```albi_lib/fiesta.py```.
 
 The flags are as follows:
 
@@ -130,6 +132,7 @@ The following command estimates the distributions, and saves the results to a fi
                  [--iterations <# of iterations>] 
                  [--output_filename filename]
 ```
+**Note**: Under Windows, replace ```fiesta.py``` with ```albi_lib/fiesta.py```.
 
 The flags are as follows:
 
