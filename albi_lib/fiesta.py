@@ -3,7 +3,8 @@
 import os
 import sys
 import argparse
-from numpy import arange, loadtxt, savetxt, hstack, vstack, newaxis, concatenate, array, ones, mean, isclose
+from numpy import *
+import numpy.linalg
 import fiesta_lib
 import progress_bar
 
@@ -116,6 +117,16 @@ if __name__ == '__main__':
         print("Note: No covariates supplied, using a constant intercept covariate.")
         covariates = ones((len(kinship_eigenvalues), 1))
   
+    # Check pathological kinships will work
+    # We need to check that each of the eigenvectors corresponding to zero eigenvalues are spanned by covariates
+    Xdagger = numpy.linalg.pinv(covariates)
+
+    is_dangerous = where(isclose(kinship_eigenvalues, 0) | (kinship_eigenvalues < 0))[0]
+    dangerous_eigenvectors = kinship_eigenvectors[:, is_dangerous]
+
+    if not allclose(dot(covariates, dot(Xdagger, dangerous_eigenvectors)), dangerous_eigenvectors):
+        print("*** Warning ***: Some eigenvalues are zero (and do not exactly correspond to eigenvectors spanned by covariates) - This might create unstable results.")
+
     print("Building heritability CIs...")   
     cis = fiesta_lib.calculate_cis_general(h_hat_values = estimates, 
                                            kinship_eigenvalues = kinship_eigenvalues,                                          
@@ -141,7 +152,14 @@ if __name__ == '__main__':
             use_eigenvectors_as_covariates = list(map(int, args.use_eigenvectors_as_covariates.split(',')))
         except:
             print("Cannot parse --use_eigenvectors_as_covariates flag. It should be a comma-separated list of integers."); sys.exit(2)
-  
+
+    use_eigenvectors_as_covariates = array(use_eigenvectors_as_covariates) % len(kinship_eigenvalues)
+
+    # Check pathological kinships will work
+    is_dangerous = isclose(kinship_eigenvalues, 0) | (kinship_eigenvalues < 0)
+    if not set(where(is_dangerous)[0]) < set(use_eigenvectors_as_covariates):
+        print("*** Warning ***: Some eigenvalues are zero (and do not correspond to eigenvectors used as covariates) - This might create unstable results.")
+
     print("Building heritability CIs...")
     cis = fiesta_lib.calculate_cis_eigenvectors(h_hat_values = estimates, 
                                                 kinship_eigenvalues = kinship_eigenvalues, 
