@@ -45,6 +45,7 @@ If you use covariates or you generated your matrix in a non-standard way, you wo
 There are several ways to install and use FIESTA.
 
 <details>
+
 ### 1. Download ZIP
 
 You can simply download the code and run it as a standard program:
