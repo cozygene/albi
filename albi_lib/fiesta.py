@@ -61,7 +61,7 @@ if __name__ == '__main__':
       print("File %s does not exist." % filename); sys.exit(2)
 
   try:
-    use_eigenvectors_as_covariates = map(int, args.use_eigenvectors_as_covariates.split(','))
+    use_eigenvectors_as_covariates = list(map(int, args.use_eigenvectors_as_covariates.split(',')))
   except:
     print("Cannot parse --use_eigenvectors_as_covariates flag. It should be a comma-separated list of integers."); sys.exit(2)
 
