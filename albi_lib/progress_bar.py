@@ -41,7 +41,7 @@ class ProgressBarIter(object):
         self.width = width
         self.prefix = '| '
         self.suffix = ' |'
-        self.percentage = " {percentage}%"
+        self.percentage = " {percentage:.2f}%"
 
     def __iter__(self):
         return self
