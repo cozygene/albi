@@ -4,7 +4,7 @@ import bisect
 
 
 # Ignore divide by 0 warnings
-seterr(divide='ignore')
+seterr(divide='ignore', invalid='ignore')
 
 class DerivativeSignCalculator(object):
     """
