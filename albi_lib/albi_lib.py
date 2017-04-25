@@ -47,7 +47,8 @@ class OnlyEigenvectorsDerivativeSignCalculator(DerivativeSignCalculator):
 
         # Calculate weights
         projection = ones((1, 1, n_samples))
-        projection[0, 0, eigenvectors_as_X] = 0
+        if len(eigenvectors_as_X):
+            projection[0, 0, eigenvectors_as_X] = 0
         projection = projection.astype(bool)
 
         ds = (kinship_eigenvalues - 1) / (H2_values * (kinship_eigenvalues - 1) + 1)

@@ -21,7 +21,7 @@ See https://github.com/cozygene/albi for full documentation about usage.
                  [--use_eigenvectors_as_covariates <list of #>]
                  [--kinship_eigenvectors filename]
                  [--covariates filename]
-                 [--add_intercept True/False]                 
+                 [--no_intercept]                 
                  (--estimates_filename filename] 
                     or
                   --estimate_grid <# of grid points>)
@@ -40,7 +40,7 @@ if __name__ == '__main__':
   parser.add_argument('-u', '--use_eigenvectors_as_covariates', type=str, default='', help="A comma-separated list detailing which eigenvectors should be used as covariates.")
   parser.add_argument('-v', '--kinship_eigenvectors', type=str, help="A file containing the eigenvectors of the kinship matrix, one eigenvector per column, in text format.")
   parser.add_argument('-x', '--covariates', type=str, help="A file containing the covariates, one covariate per column, in text format.")
-  parser.add_argument('-i', '--add_intercept', type=eval, default=True, help="If using covariates, add an intercept covariate (or only use an intercept covariate, if not covariates file supplied.")
+  parser.add_argument('-i', '--no_intercept', action='store_true', help="If using covariates, don't add an intercept covariate.")
   parser.add_argument('-n', '--iterations', type=int, default=1000, help="Number of iterations to use for estimation.")
   
   group_estimates = parser.add_mutually_exclusive_group(required=False)
@@ -98,7 +98,7 @@ if __name__ == '__main__':
       print("If using covariates, eigenvectors file must be supplied."); sys.exit(2)
 
   # Decide if it's the simpler case or the general case
-  if args.kinship_eigenvectors and (args.covariates is not None or args.add_intercept):
+  if args.kinship_eigenvectors and (args.covariates is not None or not args.no_intercept):
     # General case
     try:
       kinship_eigenvectors = loadtxt(args.kinship_eigenvectors)
@@ -113,9 +113,9 @@ if __name__ == '__main__':
           covariates = loadtxt(args.covariates)
         except:
           print("Failed reading covariates file."); raise
-        if args.add_intercept:
-            if not any(mean(covariates == 1, axis=0) == 1):
-                covariates = hstack([ones((len(kinship_eigenvalues), 1)), covariates])
+
+        if not any(mean(covariates == 1, axis=0) == 1):
+            covariates = hstack([ones((len(kinship_eigenvalues), 1)), covariates])
     else:
         print("Note: No covariates supplied, using a constant intercept covariate.")
         covariates = ones((len(kinship_eigenvalues), 1))
@@ -144,7 +144,7 @@ if __name__ == '__main__':
     # The simpler case
 
     # A subcase if not covariates were given at all in the general case - fall back
-    if args.kinship_eigenvectors and args.covariates is None and not args.add_intercept:
+    if args.kinship_eigenvectors and args.covariates is None and args.no_intercept:
         eigenvectors_as_X = []
 
     elif args.use_eigenvectors_as_covariates == '':
@@ -152,21 +152,21 @@ if __name__ == '__main__':
 
     else:
         try:
-            use_eigenvectors_as_covariates = list(map(int, args.use_eigenvectors_as_covariates.split(',')))
+            eigenvectors_as_X = list(map(int, args.use_eigenvectors_as_covariates.split(',')))
         except:
             print("Cannot parse --use_eigenvectors_as_covariates flag. It should be a comma-separated list of integers."); sys.exit(2)
 
-    use_eigenvectors_as_covariates = array(use_eigenvectors_as_covariates) % len(kinship_eigenvalues)
+    eigenvectors_as_X = array(eigenvectors_as_X) % len(kinship_eigenvalues)
 
     # Check pathological kinships will work
     is_dangerous = isclose(kinship_eigenvalues, 0) | (kinship_eigenvalues < 0)
-    if not set(where(is_dangerous)[0]) < set(use_eigenvectors_as_covariates):
+    if not set(where(is_dangerous)[0]) <= set(eigenvectors_as_X):
         print("*** Warning ***: Some eigenvalues are zero (and do not correspond to eigenvectors used as covariates) - This might create unstable results.")
 
     print("Building heritability CIs...")
     cis = fiesta_lib.calculate_cis_eigenvectors(h_hat_values = estimates, 
                                                 kinship_eigenvalues = kinship_eigenvalues, 
-                                                eigenvectors_as_X = use_eigenvectors_as_covariates,                                                 
+                                                eigenvectors_as_X = eigenvectors_as_X,                                                 
                                                 iterations = args.iterations,
                                                 alpha=1-args.confidence, 
                                                 tau=0.4, 
