@@ -117,7 +117,7 @@ The flags are as follows:
 * `estimates_filename` (`-f`) - A filename containing a list of heritability estimates (one per line) in text format. A CI will be calculated for each one. 
 * `estimate_grid` (`-g`) - Alternatively, one can ask ALBI to calculate CIs for a grid of heritability estimates (e.g., a grid of 100, will calculate CIs for 0, 0.01, ..., 0.99, 1). Default is 10.
 * `confidence` (`-c`) - The required confidence level for the CIs. Default is 0.95 (95% CIs).
-* `iterations` (`-n`) - The number of iterations used int the algorithm (see paper). Default is 1000.
+* `iterations` (`-n`) - The number of iterations used in the algorithm (see paper). Decreasing this number will make the algorithm run faster but will result with less accurate results, and vice versa. Default is 1000.
 * `output_filename` (`-o`) - File to which to write the calculated CIs. If not supplied, CIs will be printed.
 
 #### 2. General covariates
@@ -148,7 +148,7 @@ The flags are as follows:
 * `estimates_filename` (`-f`) - A filename containing a list of heritability estimates (one per line) in text format. A CI will be calculated for each one. 
 * `estimate_grid` (`-g`) - Alternatively, one can ask ALBI to calculate CIs for a grid of heritability estimates (e.g., a grid of 100, will calculate CIs for 0, 0.01, ..., 0.99, 1). Default is 10.
 * `confidence` (`-c`) - The required confidence level for the CIs. Default is 0.95 (95% CIs).
-* `iterations` (`-n`) - The number of iterations used int the algorithm (see paper). Default is 1000.
+* `iterations` (`-n`) - The number of iterations used in the algorithm (see paper).  Decreasing this number will make the algorithm run faster but will result with less accurate results, and vice versa. Default is 1000.
 * `output_filename` (`-o`) - File to which to write the calculated CIs. If not supplied, CIs will be printed.
 
 :hamster:
