@@ -15,7 +15,7 @@ Code written by Regev Schweiger, Eyal Fisher and Reut Yedidim. For questions or 
 The following reads the eigenvalues from a file, calculates 95% CIs over a grid of heritability estimates, and outputs it:
 
 ```
-   python fiesta.py --kinship_eigenvalues ./data/eigenvalues.txt  \
+   python fiesta.py --kinship_eigenvalues ./data/eigenvalues.txt
 ```
 
 The default output is the CIs for heritability estimates of 0, 0.1, ..., 0.9, 1:
