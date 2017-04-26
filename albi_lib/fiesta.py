@@ -37,7 +37,7 @@ if __name__ == '__main__':
   parser = FiestaArgumentParser(prog=os.path.basename(sys.argv[0]), usage=FIESTA_USAGE)
       
   parser.add_argument('-k', '--kinship_eigenvalues', type=str, help="A file containing the eigenvalues of the kinship matrix, one eigenvalue per line, in text format.") 
-  parser.add_argument('-u', '--use_eigenvectors_as_covariates', type=str, default='', help="A comma-separated list detailing which eigenvectors should be used as covariates.")
+  parser.add_argument('-u', '--use_eigenvectors_as_covariates', type=str, help="A comma-separated list detailing which eigenvectors should be used as covariates.")
   parser.add_argument('-v', '--kinship_eigenvectors', type=str, help="A file containing the eigenvectors of the kinship matrix, one eigenvector per column, in text format.")
   parser.add_argument('-x', '--covariates', type=str, help="A file containing the covariates, one covariate per column, in text format.")
   parser.add_argument('-i', '--no_intercept', action='store_true', help="If using covariates, don't add an intercept covariate.")
@@ -153,12 +153,15 @@ if __name__ == '__main__':
     if args.kinship_eigenvectors and args.covariates is None and args.no_intercept:
         eigenvectors_as_X = []
 
-    elif args.use_eigenvectors_as_covariates == '':
+    elif args.use_eigenvectors_as_covariates is None:
         eigenvectors_as_X = [-1]   # Default
 
     else:
         try:
-            eigenvectors_as_X = list(map(int, args.use_eigenvectors_as_covariates.split(',')))
+            if args.use_eigenvectors_as_covariates == '':
+                eigenvectors_as_X = []
+            else:
+                eigenvectors_as_X = list(map(int, args.use_eigenvectors_as_covariates.split(',')))
         except:
             print("Cannot parse --use_eigenvectors_as_covariates flag. It should be a comma-separated list of integers."); sys.exit(2)
 
