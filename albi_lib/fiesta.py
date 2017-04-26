@@ -78,6 +78,9 @@ if __name__ == '__main__':
 
   try:
     kinship_eigenvalues = loadtxt(args.kinship_eigenvalues)
+
+    if any(kinship_eigenvalues < -1e-7):
+        print("Some eigenvalues are negative."); sys.exit(2)
   except:
     print("Failed reading eigenvalues file."); raise
 
@@ -130,6 +133,9 @@ if __name__ == '__main__':
     if not allclose(dot(covariates, dot(Xdagger, dangerous_eigenvectors)), dangerous_eigenvectors):
         print("*** Warning ***: Some eigenvalues are zero (and do not exactly correspond to eigenvectors spanned by covariates) - This might create unstable results.")
 
+    # For numerical stability
+    kinship_eigenvalues = maximum(kinship_eigenvalues, 1e-10)
+
     print("Building heritability CIs...")   
     cis = fiesta_lib.calculate_cis_general(h_hat_values = estimates, 
                                            kinship_eigenvalues = kinship_eigenvalues,                                          
@@ -162,6 +168,9 @@ if __name__ == '__main__':
     is_dangerous = isclose(kinship_eigenvalues, 0) | (kinship_eigenvalues < 0)
     if not set(where(is_dangerous)[0]) <= set(eigenvectors_as_X):
         print("*** Warning ***: Some eigenvalues are zero (and do not correspond to eigenvectors used as covariates) - This might create unstable results.")
+
+    # For numerical stability
+    kinship_eigenvalues = maximum(kinship_eigenvalues, 1e-10)
 
     print("Building heritability CIs...")
     cis = fiesta_lib.calculate_cis_eigenvectors(h_hat_values = estimates, 

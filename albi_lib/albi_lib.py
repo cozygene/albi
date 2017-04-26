@@ -49,14 +49,14 @@ class OnlyEigenvectorsDerivativeSignCalculator(DerivativeSignCalculator):
         projection = ones((1, 1, n_samples))
         if len(eigenvectors_as_X):
             projection[0, 0, eigenvectors_as_X] = 0
-        projection = projection.astype(bool)
 
-        ds = (kinship_eigenvalues - 1) / (H2_values * (kinship_eigenvalues - 1) + 1)
-        denom = n_samples
 
         if REML:
             ds = projection * (kinship_eigenvalues - 1) / (H2_values * (kinship_eigenvalues-1) + 1)                
             denom = n_samples - len(eigenvectors_as_X)
+        else:
+            ds = (kinship_eigenvalues - 1) / (H2_values * (kinship_eigenvalues - 1) + 1)
+            denom = n_samples
 
 
         self.weights = projection * (h2_values * (kinship_eigenvalues - 1) + 1) / \
@@ -64,6 +64,7 @@ class OnlyEigenvectorsDerivativeSignCalculator(DerivativeSignCalculator):
                                      * (ds - nansum(ds, 2)[:, :, newaxis] / denom)
 
         self.weights = nan_to_num(self.weights)
+
 
     def get_derivative_signs(self, us):
         """
