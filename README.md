@@ -113,7 +113,7 @@ The following command builds CIs and saves them to a file:
 The flags are as follows:
 
 * `kinship_eigenvalues` (Shortcut: `-k`) - A file containing the eigenvalues of the kinship matrix, one eigenvalue per line, in text format. This could be created, for example, with GCTA's `--pca` flag.
-* `use_eigenvectors_as_covariates` (`-u`) - A list detailing which eigenvectors should be used as covariates. For example: If you only use an intercept term, and your kinship matrix was constructed from a mean-centered SNP matrix, use `-1` (the last eigenvector is equal to the constant vector); if in addition, you add the first 3 PCs as covariates, use `0,1,2,-1`. If not specified, defaults to `-1`. If you explicit no covariates, use `-u ''`.
+* `use_eigenvectors_as_covariates` (`-u`) - A list detailing which eigenvectors should be used as covariates. For example: If you only use an intercept term, and your kinship matrix was constructed from a mean-centered SNP matrix, use `-1` (the last eigenvector is equal to the constant vector); if in addition, you add the first 3 PCs as covariates, use `0,1,2,-1`. If not specified, defaults to `-1`. If you explicitly want no covariates, use `-u ''`.
 * `estimates_filename` (`-f`) - A filename containing a list of heritability estimates (one per line) in text format. A CI will be calculated for each one. 
 * `estimate_grid` (`-g`) - Alternatively, one can ask ALBI to calculate CIs for a grid of heritability estimates (e.g., a grid of 100, will calculate CIs for 0, 0.01, ..., 0.99, 1). Default is 10.
 * `confidence` (`-c`) - The required confidence level for the CIs. Default is 0.95 (95% CIs).
