@@ -15,8 +15,9 @@ Code written by Regev Schweiger, Eyal Fisher and Reut Yedidim. For questions or 
 The following reads the eigenvalues from a file, calculates 95% CIs over a grid of heritability estimates, and outputs it:
 
 ```
-   python fiesta.py --kinship_eigenvalues ./data/eigenvalues.txt  \
+   python fiesta.py --kinship_eigenvalues ./data/eigenvalues.txt
 ```
+**Note**: Under Windows, replace ```fiesta.py``` with ```albi_lib/fiesta.py```.
 
 The default output is the CIs for heritability estimates of 0, 0.1, ..., 0.9, 1:
 
@@ -43,6 +44,8 @@ If you use covariates or you generated your matrix in a non-standard way, you wo
 
 There are several ways to install and use FIESTA.
 
+<details>
+
 ### 1. Download ZIP
 
 You can simply download the code and run it as a standard program:
@@ -54,7 +57,7 @@ You can simply download the code and run it as a standard program:
    python fiesta.py [flags]
 ```
 
-**Note**: The [NumPy](http://www.numpy.org/) package is required for FIESTA.
+**Note**: The [NumPy](http://www.numpy.org/) and SciPy packages are required for FIESTA.
 
 ### 2. Install using `pip` or `setuptools`
 
@@ -77,6 +80,9 @@ To uninstall, run:
 ```
     sudo -H pip uninstall albi
 ```    
+</details>
+
+
 ## Running FIESTA
 
 The following section describes all of FIESTA's options and flags.
@@ -102,6 +108,7 @@ The following command builds CIs and saves them to a file:
                  [--iterations <# of iterations>] 
                  [--output_filename filename]
 ```
+**Note**: Under Windows, replace ```fiesta.py``` with ```albi_lib/fiesta.py```.
 
 The flags are as follows:
 
@@ -110,7 +117,7 @@ The flags are as follows:
 * `estimates_filename` (`-f`) - A filename containing a list of heritability estimates (one per line) in text format. A CI will be calculated for each one. 
 * `estimate_grid` (`-g`) - Alternatively, one can ask ALBI to calculate CIs for a grid of heritability estimates (e.g., a grid of 100, will calculate CIs for 0, 0.01, ..., 0.99, 1). Default is 10.
 * `confidence` (`-c`) - The required confidence level for the CIs. Default is 0.95 (95% CIs).
-* `iterations` (`-n`) - The number of iterations used int the algorithm (see paper). Default is 1000.
+* `iterations` (`-n`) - The number of iterations used in the algorithm (see paper). Decreasing this number will make the algorithm run faster but will result with less accurate results, and vice versa. Default is 1000.
 * `output_filename` (`-o`) - File to which to write the calculated CIs. If not supplied, CIs will be printed.
 
 #### 2. General covariates
@@ -122,7 +129,7 @@ The following command estimates the distributions, and saves the results to a fi
    python fiesta.py --kinship_eigenvalues filename
                   --kinship_eigenvectors filename
                  [--covariates filename]
-                 [--add_intercept True/False]
+                 [--no_intercept]
                  (--estimates_filename filename
                     or
                   --estimate_grid <# of grid points>)
@@ -130,17 +137,18 @@ The following command estimates the distributions, and saves the results to a fi
                  [--iterations <# of iterations>] 
                  [--output_filename filename]
 ```
+**Note**: Under Windows, replace ```fiesta.py``` with ```albi_lib/fiesta.py```.
 
 The flags are as follows:
 
 * `kinship_eigenvalues` (`-k`) - A file containing the eigenvalues of the kinship matrix, one eigenvalue per line, in text format. This could be created, for example, with GCTA's `--pca` flag.
 * `kinship_eigenvectors`(`-v`) - A file containing the eigenvectors of the kinship matrix, one eigenvector per column, in text format. This could be created, for example, with GCTA's `--pca` flag.
 * `covariates` (`-x`) - A file containing the covariates, one covariate per column, in text format. 
-* `add_intercept` (`-i`) - Boolean flag (True/False) - whether to use a constant 1 (intercept) covariate. Can be used without an additional covariates file. Default is True.
+* `no_intercept` (`-i`) - Add to explicitly *not* use a constant 1 (intercept) covariate. Can be used without an additional covariates file. Is not enabled by default, i.e. an intercept is added.
 * `estimates_filename` (`-f`) - A filename containing a list of heritability estimates (one per line) in text format. A CI will be calculated for each one. 
 * `estimate_grid` (`-g`) - Alternatively, one can ask ALBI to calculate CIs for a grid of heritability estimates (e.g., a grid of 100, will calculate CIs for 0, 0.01, ..., 0.99, 1). Default is 10.
 * `confidence` (`-c`) - The required confidence level for the CIs. Default is 0.95 (95% CIs).
-* `iterations` (`-n`) - The number of iterations used int the algorithm (see paper). Default is 1000.
+* `iterations` (`-n`) - The number of iterations used in the algorithm (see paper).  Decreasing this number will make the algorithm run faster but will result with less accurate results, and vice versa. Default is 1000.
 * `output_filename` (`-o`) - File to which to write the calculated CIs. If not supplied, CIs will be printed.
 
 :hamster:
