@@ -6,7 +6,10 @@ import sys
 import functools
 
 import albi_lib
-import progress_bar
+if sys.version_info[0] == 3:
+    from . import progress_bar
+else:
+    import progress_bar
 
 def binary_robbins_monro_general(function, C, alpha, start):
     global rm_tau, rm_iterations, rm_use_convergence_criterion
