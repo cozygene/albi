@@ -4,8 +4,13 @@ import os
 import sys
 import argparse
 from numpy import arange, loadtxt, savetxt, hstack, vstack, newaxis, concatenate, array
-import albi_lib
-import progress_bar
+
+if sys.version_info[0] == 3:
+    from . import progress_bar
+    from . import albi_lib
+else:
+    import progress_bar
+    import albi_lib
 
 class AlbiArgumentParser(argparse.ArgumentParser):
     def error(self, message):
