@@ -1,8 +1,8 @@
 ## FIESTA (*F*ast confidence *I*nt*E*rvals using *ST*ochastic *A*pproximation) 
 
-FIESTA is a method for the construction of accurate confidence intervals (CIs) for heritability. FIESTA can be used as an add-on to existing methods for heritability and variance components estimation. FIESTA is described in the following [paper]().
+FIESTA is a method for the construction of accurate confidence intervals (CIs) for heritability. FIESTA can be used as an add-on to existing methods for heritability and variance components estimation. FIESTA is described in the following [paper](https://link.springer.com/chapter/10.1007/978-3-319-56970-3_15).
 
-The Supplemental Information for the FIESTA RECOMB 2017 paper is available [here]().
+The Supplemental Information for the FIESTA RECOMB 2017 paper is available [here](http://regevs.weebly.com/uploads/2/4/5/7/24572748/cis-biorxiv.pdf).
 
 If you want to actually estimate the distribution of the heritability estimator, or need CIs for a lot of estimates, check out FIESTA's predecessor, ALBI, available under the same package [here](ALBI.md).
 
