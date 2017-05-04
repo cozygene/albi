@@ -6,12 +6,8 @@ import argparse
 from numpy import *
 import numpy.linalg
 
-if sys.version_info[0] == 3:
-    from . import progress_bar
-    from . import fiesta_lib
-else:
-    import progress_bar
-    import fiesta_lib
+import progress_bar
+import fiesta_lib
 
 class FiestaArgumentParser(argparse.ArgumentParser):
     def error(self, message):

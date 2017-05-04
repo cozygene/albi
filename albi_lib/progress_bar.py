@@ -68,4 +68,4 @@ class ProgressBarIter(object):
         self.stdout.flush()
 
     def __len__(self):
-      return self.length
+      return int(self.length)

@@ -5,12 +5,8 @@ import sys
 import argparse
 from numpy import arange, loadtxt, savetxt, hstack, vstack, newaxis, concatenate, array
 
-if sys.version_info[0] == 3:
-    from . import progress_bar
-    from . import albi_lib
-else:
-    import progress_bar
-    import albi_lib
+import progress_bar
+import albi_lib
 
 class AlbiArgumentParser(argparse.ArgumentParser):
     def error(self, message):
@@ -84,7 +80,7 @@ if __name__ == '__main__':
       print("File %s does not exist." % filename); sys.exit(2)
 
   try:
-    use_eigenvectors_as_covariates = map(int, args.use_eigenvectors_as_covariates.split(','))
+    use_eigenvectors_as_covariates = list(map(int, args.use_eigenvectors_as_covariates.split(',')))
   except:
     print("Cannot parse --use_eigenvectors_as_covariates flag. It should be a comma-separated list of integers."); sys.exit(2)
 
