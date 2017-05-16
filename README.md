@@ -141,8 +141,8 @@ The following command estimates the distributions, and saves the results to a fi
 
 The flags are as follows:
 
-* `kinship_eigenvalues` (`-k`) - A file containing the eigenvalues of the kinship matrix, one eigenvalue per line, in text format. This could be created, for example, with GCTA's `--pca` flag.
-* `kinship_eigenvectors`(`-v`) - A file containing the eigenvectors of the kinship matrix, one eigenvector per column, in text format. This could be created, for example, with GCTA's `--pca` flag.
+* `kinship_eigenvalues` (`-k`) - A file containing the eigenvalues of the kinship matrix, one eigenvalue per line, in text format. This could be created, for example, with GCTA's `--pca` flag, after removing the IDs from the output file.
+* `kinship_eigenvectors`(`-v`) - A file containing the eigenvectors of the kinship matrix, one eigenvector per column, in text format. This could be created, for example, with GCTA's `--pca` flag, after removing the IDs from the output file.
 * `covariates` (`-x`) - A file containing the covariates, one covariate per column, in text format. 
 * `no_intercept` (`-i`) - Add to explicitly *not* use a constant 1 (intercept) covariate. Can be used without an additional covariates file. Is not enabled by default, i.e. an intercept is added.
 * `estimates_filename` (`-f`) - A filename containing a list of heritability estimates (one per line) in text format. A CI will be calculated for each one. 
