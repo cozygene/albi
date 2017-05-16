@@ -109,7 +109,7 @@ if __name__ == '__main__':
     except:
       print("Failed reading eigenvectors file."); raise
 
-    if args.use_eigenvectors_as_covariates != '':
+    if args.use_eigenvectors_as_covariates is not None:
         print("If eigenvectors were given explicitly, cannot use --use_eigenvectors_as_covariates - use covariates directly."); sys.exit(2)
 
     if args.covariates is not None: 
