@@ -49,7 +49,7 @@ if __name__ == '__main__':
   group_estimates.add_argument('-g', '--estimate_grid', type=int, default=10, help="A grid of heritability estimates. A CI will be calculated for each one (e.g., a grid of 100, will calculate CIs for 0, 0.01, ..., 0.99, 1).")
   parser.add_argument('-c', '--confidence', type=float, default=0.95, help = "The required confidence level for the CIs.")
   parser.add_argument('-o', '--output_filename', type=str, help="Filename to which to write the calculated CIs.")
-  
+
   args = parser.parse_args()
 
   #

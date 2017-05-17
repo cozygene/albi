@@ -194,7 +194,7 @@ def get_lower_endpoint(derivative_function, alpha, h_hat, s, t, s_tag, t_tag, s_
         
 
 
-def calculate_cis_internal(h_hat_values, derivative_function, alpha):
+def calculate_cis_internal(h_hat_values, derivative_function, alpha, use_progress_bar):
     s = binary_robbins_monro_ci(derivative_function, 0, 1-alpha/2, start=0.3)
     t = binary_robbins_monro_ci(derivative_function, 1, alpha/2, start=0.7)
 
@@ -211,8 +211,13 @@ def calculate_cis_internal(h_hat_values, derivative_function, alpha):
     lower_endpoints = []
     upper_endpoints = []
 
+    if use_progress_bar:
+        it = progress_bar.ProgressBarIter(len(h_hat_values))
+    else:
+        it = range(len(h_hat_values))
+
     n = 0
-    for i in progress_bar.ProgressBarIter(len(h_hat_values)):
+    for i in it:
         h_hat = h_hat_values[n]        
         n += 1
         upper_endpoints.append(get_upper_endpoint(derivative_function, alpha, h_hat, s, t, s_tag, t_tag, s_tagaim, t_tagaim))
@@ -220,17 +225,17 @@ def calculate_cis_internal(h_hat_values, derivative_function, alpha):
 
     return array([lower_endpoints, upper_endpoints]).T
 
-def calculate_cis_eigenvectors(h_hat_values, kinship_eigenvalues, eigenvectors_as_X, iterations, alpha, tau=0.4, use_convergence_criterion=False):
+def calculate_cis_eigenvectors(h_hat_values, kinship_eigenvalues, eigenvectors_as_X, iterations, alpha, tau=0.4, use_convergence_criterion=False, use_progress_bar=True):
     global rm_tau, rm_iterations, rm_use_convergence_criterion
     rm_tau, rm_iterations, rm_use_convergence_criterion = tau, iterations, use_convergence_criterion
 
     derivative_function = functools.partial(eigenvector_derivative, kinship_eigenvalues=kinship_eigenvalues, eigenvectors_as_X=eigenvectors_as_X)
-    return calculate_cis_internal(h_hat_values, derivative_function, alpha)
+    return calculate_cis_internal(h_hat_values, derivative_function, alpha, use_progress_bar)
 
-def calculate_cis_general(h_hat_values, kinship_eigenvalues, kinship_eigenvectors, covariates, iterations, alpha, tau=0.4, use_convergence_criterion=False):
+def calculate_cis_general(h_hat_values, kinship_eigenvalues, kinship_eigenvectors, covariates, iterations, alpha, tau=0.4, use_convergence_criterion=False, use_progress_bar=True):
     global rm_tau, rm_iterations, rm_use_convergence_criterion
     rm_tau, rm_iterations, rm_use_convergence_criterion = tau, iterations, use_convergence_criterion
 
     derivative_function = functools.partial(general_derivative, kinship_eigenvalues=kinship_eigenvalues, kinship_eigenvectors=kinship_eigenvectors, covariates=covariates)
-    return calculate_cis_internal(h_hat_values, derivative_function, alpha)
+    return calculate_cis_internal(h_hat_values, derivative_function, alpha, use_progress_bar)
 
