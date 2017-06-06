@@ -80,8 +80,8 @@ if __name__ == '__main__':
   try:
     kinship_eigenvalues = loadtxt(args.kinship_eigenvalues)
 
-    if any(kinship_eigenvalues < -1e-4):
-        print("Some eigenvalues are negative."); sys.exit(2)
+    if any(kinship_eigenvalues < 0):
+        print("Warning: Some eigenvalues are negative. Rounding up."); 
   except:
     print("Failed reading eigenvalues file."); raise
 
