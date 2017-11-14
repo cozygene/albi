@@ -151,4 +151,26 @@ The flags are as follows:
 * `iterations` (`-n`) - The number of iterations used in the algorithm (see paper).  Decreasing this number will make the algorithm run faster but will result with less accurate results, and vice versa. Default is 1000.
 * `output_filename` (`-o`) - File to which to write the calculated CIs. If not supplied, CIs will be printed.
 
+## Using in `SOLAR-Eclipse`
+
+[SOLAR-Eclipse](http://solar-eclipse-genetics.org/) is a software package for genetic analysis. SOLAR deals mainly with explicit pedigree files, but it is possible to generate a kinship matrix from it for processing in FIESTA. Whenever you load a pedigree file, solar saves the kinship matrix it computes (see 8.3 [here](https://helix.nih.gov/Documentation/solar-6.6.2-doc/08.chapter.html)). After loading the pedigree and locating the matrix file, run the following Python code:
+```python
+import numpy as np
+import gzip
+import numpy.linalg
+
+filename = "<path_to_file>/phi2.gz"
+lines = np.vstack([np.array(line.strip().split()[:3]).astype(float) for line in gzip.open(filename).read().splitlines()[1:]])
+n_samples = int(max(lines[:,0]))
+kinship_matrix = np.zeros((n_samples, n_samples))
+for x,y,c in lines:
+    kinship_matrix[int(x)-1, int(y)-1] = c
+
+vals, vecs = numpy.linalg.eigh(kinship_matrix)
+savetxt("<path>/eigenvalues.txt", vals[::-1])
+savetxt("<path>/eigenvectors.txt", vecs[::-1])
+```
+
+The output `txt` can now be used in FIESTA.
+
 :hamster:
