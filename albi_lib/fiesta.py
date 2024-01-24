@@ -90,7 +90,7 @@ if __name__ == '__main__':
   #
   if args.estimates_filename:
     try:
-      estimates = loadtxt(args.estimates_filename)
+      estimates = loadtxt(args.estimates_filename, ndmin=1)
     except:
       print("Failed reading estimates file."); raise
         
